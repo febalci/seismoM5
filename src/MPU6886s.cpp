@@ -164,7 +164,7 @@ void MPU6886s::calibrateAccel(int bufsize, int acl_deadzone) {
         Serial.print("\t");
         Serial.println(az_offset); 
         Serial.println("\nData is printed as: acelX acelY acelZ");
-        Serial.println("Check that your sensor readings are close to 0 0 16384");
+        Serial.println("Check that your sensor readings are close to 16384 0 0");
         state++;
     }
 }
@@ -200,7 +200,7 @@ void MPU6886s::calibration(){
   I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_ZA_OFFSET_H, 2, buf);
   az_offset = ((int16_t)buf[0] << 8) | buf[1];
 
-  mean_az = mean_az - 16384;
+  mean_ax = mean_ax - 16384;
 
   int sign;
   if (mean_ax >=0) sign = +1; else sign = -1;
@@ -218,14 +218,14 @@ void MPU6886s::calibration(){
     meansensors();
     Serial.println("...");
 
-    if (abs(mean_ax)<=acel_deadzone) ready++;
-    else ax_offset=ax_offset-mean_ax/acel_deadzone;
+    if (abs(16384-mean_ax)<=acel_deadzone) ready++;
+    else ax_offset=ax_offset+(16384-mean_ax)/acel_deadzone;
  
     if (abs(mean_ay)<=acel_deadzone) ready++;
     else ay_offset=ay_offset-mean_ay/acel_deadzone;
  
-    if (abs(16384-mean_az)<=acel_deadzone) ready++;
-    else az_offset=az_offset+(16384-mean_az)/acel_deadzone;
+    if (abs(mean_az)<=acel_deadzone) ready++;
+    else az_offset=az_offset-mean_az/acel_deadzone;
  
     Serial.println(ready);
 
