@@ -24,15 +24,15 @@ The triggering mechanism is, if PGA exceeds limit, that is an earthquake. PGA gi
 
 This is a Platformio code. First of all, the user needs to fill WiFi and MQTT server details in main.cpp. Other parameters like Seismic, MPU calibration or screen properties can be changed for best fit after some tests and trials.
 
-Button A of M5stickC decreases the seismic scale_factor by a factor of 2. When it comes down to a factor of 1, it goes back to 128,64,32,16,8,4,2,1 in order. But for this to be effective, pga_trigger variable should also be adjusted. The scale_factor valid shows up on right top corner of the screen.
+Button A of M5stickC toggles MQTT server connection. If bottom right corner of the screen shows MQTT, the server is connected.
 
-Button B of M5stickC toggles MQTT server connection. If bottom right corner of the screen shows MQTT, the server is connected.
+Button B of M5stickC resets M5StickC for recalibration purposes.
 
 ## MQTT
 
 ### Availability: m5seismo/status
 
-  "**online**" or "**offline**"
+"**online**" or "**offline**"
 
 ### State: m5seismo/state
 
@@ -48,6 +48,17 @@ Button B of M5stickC toggles MQTT server connection. If bottom right corner of t
 
 ### Events: m5seismo/event
 
+**{"x":"-85","y":"-1097","z":"16305","pga":"0.07"}**   <sup>Sample</sup>
+
+Momentary x,y,z parameters and PGA in (g). Only send while an earthquake occurs.
+
+PGA results can be compared with the values in:
+
+[PGA Correlation with the Mercalli scale](https://en.wikipedia.org/wiki/Peak_ground_acceleration#Correlation_with_the_Mercalli_scale)
+
+or
+
+[Japan Meteorological Agency seismic intensity scale](https://en.wikipedia.org/wiki/Japan_Meteorological_Agency_seismic_intensity_scale#Scale_overview)
 
 
 ## Mounting
