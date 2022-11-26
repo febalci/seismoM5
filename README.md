@@ -8,6 +8,8 @@ SeismoM5 is an Earthquake Sensor Implementation on M5StickC, using its own MPU68
 - Show PGA always.
 - Emergency alerts; Red Led and SPK HAT sound warning during an earthquake.
 
+<img src="pics/IMG_4012.jpg" width="150" height="150">
+
 ## Seismology
 
 I am nowhere near being a Seismologist or I understand anything about. It is just that I live in an overly active Seismic zone. The idea came up for adding an earthquake sensor to the smart home; to shut gas valves off and open some rolling shutters for an escape route during an earthquake.
