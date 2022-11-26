@@ -28,6 +28,28 @@ Button A of M5stickC decreases the seismic scale_factor by a factor of 2. When i
 
 Button B of M5stickC toggles MQTT server connection. If bottom right corner of the screen shows MQTT, the server is connected.
 
+## MQTT
+
+### Availability: m5seismo/status
+
+  "**online**" or "**offline**"
+
+### State: m5seismo/state
+
+**INIT_MPU:** Init MPU6886.
+
+**WAIT:** Wait for 10 seconds, to get ready to keep M5StickC steady.
+
+**CALIBRATION:** MPU6886 Accelerator find offsets and send to MPU registers for calibration. Might take up to 1 minute.
+
+**LISTENING:** Everything is ready and listening for earthquakes.
+
+**RESET:** Send a raw "RESET" message from anywhere to reset M5StickC for recalibration purposes.
+
+### Events: m5seismo/event
+
+
+
 ## Mounting
 
 Seismologists mount accelerometer based seismic sensors to the lowest point of the structure, close to the ground as possible. However, since this is an amateur earthquake sensor, i mount it as high as possible in the house, on a wall. You can use the in-built magnets of M5StickC to attach it to a metal surface but as i experienced they are not so strong and may fall off during an earthquake. Double sided adhesive mounting tapes can also work, but make sure the wall paint is a stickable one. All in all, it should be mounted very firm and be careful about the x,y,z axis of the accelerometer; use a carpenters level if required. 
