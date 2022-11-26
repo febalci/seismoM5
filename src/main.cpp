@@ -3,7 +3,7 @@
 #include <WiFi.h>
 #include <AsyncMqttClient.h>
 
-bool MQTT_active = false; // Enable / Disable MQTT
+bool MQTT_active = true; // Enable / Disable MQTT
 
 //WiFi Parameters
 const char* WIFI_SSID = "XXXXXXXX";
@@ -20,12 +20,15 @@ const char* MQTT_PASS = "XXXXXXXX";
 
 AsyncMqttClient mqttClient;
 
-// SPK HAT
-const int SPK_pin   = 26;
-int spkChannel      = 0;
-int spkFreq         = 50;
-int spkResolution   = 10;
+// SPK HAT, Comment out this line if no SPK HAT is used
+#define SPK_HAT  
 
+#ifdef SPK_HAT
+  const int SPK_pin   = 26;
+  int spkChannel      = 0;
+  int spkFreq         = 50;
+  int spkResolution   = 10;
+# endif
 
 // Graph - 160 x 80 TFT Screen; Coordinates for main screen:
 int8_t lcd_brightness=8; // TFT backlight brightness for standby ( value: 7 - 15 )
@@ -57,12 +60,33 @@ MPU6886s seismo;
 
 void publish_available();
 void publish_state(String state);
-void publish_data(String x_mag, String y_mag, String z_mag, String pga_mag);
+void publish_event(String x_mag, String y_mag, String z_mag, String pga_mag);
 void onMqttPublish(uint16_t packetId);
 void onMqttConnect(bool sessionPresent);
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason);
+void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total);
 
 void calibrate_MPU() {
+  Serial.println("Init MPU6886...");
+  publish_state("INIT_MPU");
+  seismo.Init();
+
+  M5.Lcd.setRotation(1);
+  M5.Lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(WHITE,BLACK);
+  M5.Lcd.setTextSize(2);
+  M5.Lcd.setCursor(2, 5);
+  M5.Lcd.print("PREPARE FOR");
+  M5.Lcd.setCursor(17, 35);
+  M5.Lcd.print("CALIBRATION");
+  publish_state("WAIT");
+  //Progress bar
+  M5.Lcd.drawRect(32,60,100,10,YELLOW);
+  for (int i = 0; i <= 9; i++) { // Wait 10 secs
+    delay(1000);
+    M5.Lcd.fillRect(32+(i*10),60,10,10,YELLOW);
+  }
+
   Serial.println("Setting MPU6886 Range +/- 2g");
   seismo.SetAccelFsr(seismo.AFS_2G);
 
@@ -112,11 +136,14 @@ void draw_graph(float x_vector, float y_vector, float z_vector) {
 
 void eq_happening() {
   eq_status = true;
-  publish_data(String(ax),String(ay),String(az),String(pga));
+  publish_event(String(ax),String(ay),String(az),String(pga));
   eq_time_count = 0;
   M5.Axp.ScreenBreath(15); // Full Brightness
+  publish_state("EARTHQUAKE");
   digitalWrite(M5_LED, LOW);
+#ifdef SPK_HAT
   ledcWriteTone(spkChannel, 800);
+#endif
 }
 
 void setup() {
@@ -125,9 +152,10 @@ void setup() {
 
   pinMode(M5_LED, OUTPUT);
   digitalWrite(M5_LED, HIGH);
+#ifdef SPK_HAT
   ledcSetup(spkChannel, spkFreq, spkResolution);
   ledcAttachPin(SPK_pin, spkChannel);
-
+#endif
   Serial.println("WiFi Connecting...");
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -145,30 +173,11 @@ void setup() {
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onPublish(onMqttPublish);
+  mqttClient.onMessage(onMqttMessage);
   mqttClient.setWill(MQTT_PUB_AVAILABILITY, 1, true, "offline");
   mqttClient.setServer(MQTT_SERVER, atoi(MQTT_PORT));
   mqttClient.setCredentials(MQTT_USER, MQTT_PASS);
   if (MQTT_active) mqttClient.connect();
-
-  Serial.println("Init MPU6886...");
-  publish_state("INIT_MPU");
-  seismo.Init();
-
-  M5.Lcd.setRotation(1);
-  M5.Lcd.fillScreen(BLACK);
-  M5.Lcd.setTextColor(WHITE,BLACK);
-  M5.Lcd.setTextSize(2);
-  M5.Lcd.setCursor(2, 5);
-  M5.Lcd.print("PREPARE FOR");
-  M5.Lcd.setCursor(17, 35);
-  M5.Lcd.print("CALIBRATION");
-  publish_state("WAIT");
-  //Progress bar
-  M5.Lcd.drawRect(32,60,100,10,YELLOW);
-  for (int i = 0; i <= 9; i++) { // Wait 10 secs
-    delay(1000);
-    M5.Lcd.fillRect(32+(i*10),60,10,10,YELLOW);
-  }
 
   calibrate_MPU();
 }
@@ -182,9 +191,12 @@ void loop() {
     eq_status = false;
     eq_time_count = 0;
 
-    digitalWrite(M5_LED, HIGH);
-    ledcWriteTone(spkChannel, 0);
+    publish_state("LISTENING");
 
+    digitalWrite(M5_LED, HIGH);
+#ifdef SPK_HAT
+    ledcWriteTone(spkChannel, 0);
+#endif
     M5.Axp.ScreenBreath(lcd_brightness); 
     M5.Lcd.setTextSize(1);
     M5.Lcd.setTextColor(WHITE,BLACK);
@@ -217,9 +229,9 @@ void loop() {
     M5.Lcd.drawFastHLine(5,graph_y_axis[i],2,WHITE);
   }
 
-  x_vector_mag = ax / 16384.0;
+  x_vector_mag = ax / 16384.0 - 1.0;
   y_vector_mag = ay / 16384.0;
-  z_vector_mag = az / 16384.0 - 1.0;
+  z_vector_mag = az / 16384.0;
   
   draw_graph(x_vector_mag,y_vector_mag,z_vector_mag);
 
@@ -247,21 +259,10 @@ void loop() {
   }
 
   if (eq_status) {
-    publish_data(String(ax),String(ay),String(az),String(pga));
+    publish_event(String(ax),String(ay),String(az),String(pga));
   }
 
   if (M5.BtnA.wasPressed()) {
-    scale_factor = scale_factor / 2;
-    if (scale_factor <=1) scale_factor = 128;
-    M5.Lcd.setTextColor(WHITE,BLACK);
-    M5.Lcd.setCursor(137,0);
-    M5.Lcd.print("   ");
-    M5.Lcd.setCursor(137,0);
-    M5.Lcd.print((int)scale_factor);  
-  }
-
-  if (M5.BtnB.wasPressed()) {
-//    ESP.restart();
     if (mqttClient.connected()) {
       publish_state("DISCONNECT");
       mqttClient.disconnect();
@@ -269,6 +270,10 @@ void loop() {
       publish_state("LISTENING");
       mqttClient.connect();
     }
+  }
+
+  if (M5.BtnB.wasPressed()) {
+    ESP.restart();
   }
 
   if (eq_status) eq_time_count++ ;
@@ -285,13 +290,20 @@ void publish_state(String state) {
       uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_STATE, 1, true, state.c_str());
 }
 
-void publish_data(String x_mag, String y_mag, String z_mag, String pga_mag) {
+void publish_event(String x_mag, String y_mag, String z_mag, String pga_mag) {
     String msg = "{\"x\":\""+x_mag + "\",\"y\":\"" + y_mag + "\",\"z\":\"" + z_mag + "\",\"pga\":\""+ pga_mag +"\"}";
-    uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_EVENT, 1, true, msg.c_str());
+    uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_EVENT, 0, true, msg.c_str());
 }
 
 void onMqttPublish(uint16_t packetId) {
 
+}
+
+void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
+  if ( (String(topic) == MQTT_PUB_STATE) && (String(payload) == "RESET")) {
+      Serial.print("MQTT Restart Request Received");
+    ESP.restart();
+  }
 }
 
 void onMqttConnect(bool sessionPresent) {
@@ -299,6 +311,7 @@ void onMqttConnect(bool sessionPresent) {
   Serial.print("Session present: ");
   publish_available();
   Serial.println(sessionPresent);
+  uint16_t packetIdSub = mqttClient.subscribe(MQTT_PUB_STATE, 0);
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
