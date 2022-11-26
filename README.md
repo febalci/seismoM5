@@ -8,8 +8,10 @@ SeismoM5 is an Earthquake Sensor Implementation on M5StickC, using its own MPU68
 - Show PGA always.
 - Emergency alerts; Red Led and SPK HAT sound warning during an earthquake.
 
-<img src="pics/IMG_4012.jpg" width="150" height="150">
-
+<p align="center">
+<img src="pics/IMG_4012.jpg" width="382" height="200">
+</p>
+  
 ## Seismology
 
 I am nowhere near being a Seismologist or I understand anything about. It is just that I live in an overly active Seismic zone. The idea came up for adding an earthquake sensor to the smart home; to shut gas valves off and open some rolling shutters for an escape route during an earthquake.
@@ -29,6 +31,9 @@ This is a Platformio code. First of all, the user needs to fill WiFi and MQTT se
 Button A of M5stickC toggles MQTT server connection. If bottom right corner of the screen shows MQTT, the server is connected.
 
 Button B of M5stickC resets M5StickC for recalibration purposes.
+
+<img src="pics/IMG_3999.jpg" width="245" height="150"> <img src="pics/IMG_4001.jpg" width="254" height="150"> <img src="pics/IMG_4003.jpg" width="250" height="150">
+
 
 ## MQTT
 
