@@ -31,7 +31,7 @@ AsyncMqttClient mqttClient;
 # endif
 
 // Graph coordinates for main screen:
-// M5StickC: 160x80 , M5StickCPlus: 135x240 pixels
+// M5StickC: 160x80 , M5StickCPlus: 240x135 pixels
 int8_t lcd_brightness=8; // TFT backlight brightness for standby ( value: 7 - 15 )
 uint8_t graph_x_axis = 7; // X Coordinate for Vertical axis line
 uint8_t graph_y_axis[3] = {25,35,45}; // Y coordinates for X,Y,Z horizontal axis lines
