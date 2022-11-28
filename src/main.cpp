@@ -20,8 +20,8 @@ const char* MQTT_PASS = "XXXXXXXX";
 
 AsyncMqttClient mqttClient;
 
-// SPK HAT, Comment out this line if no SPK HAT is used
-#define SPK_HAT  
+// SPK HAT, uncomment out this line if SPK HAT is used
+// #define SPK_HAT  
 
 #ifdef SPK_HAT
   const int SPK_pin   = 26;
