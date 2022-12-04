@@ -2,12 +2,19 @@
 #include "MPU6886s.h"
 #include <WiFi.h>
 #include <AsyncMqttClient.h>
+#include <WebServer.h>
+#include <Update.h>
+#include <Preferences.h>
+#include <stdlib.h>
+
+Preferences preferences; // To store and read pga_trigger
 
 bool MQTT_active = true; // Enable / Disable MQTT
 
 //WiFi Parameters
 const char* WIFI_SSID = "XXXXXXXX";
 const char* WIFI_PASS = "XXXXXXXX";
+WebServer server(80); // OTA
 
 // MQTT Parameters
 const char* MQTT_SERVER = "XXXXXXXX";
@@ -17,6 +24,7 @@ const char* MQTT_PASS = "XXXXXXXX";
 #define MQTT_PUB_EVENT "m5seismo/event"
 #define MQTT_PUB_STATE  "m5seismo/state"
 #define MQTT_PUB_AVAILABILITY "m5seismo/status" // online or offline
+#define MQTT_PUB_CHANGE_PGA "m5seismo/change_pga" // change pga_trigger
 
 AsyncMqttClient mqttClient;
 
@@ -30,8 +38,7 @@ AsyncMqttClient mqttClient;
   int spkResolution   = 10;
 # endif
 
-// Graph coordinates for main screen:
-// M5StickC: 160x80 , M5StickCPlus: 240x135 pixels
+// Graph coordinates for main screen: M5StickC: 160x80 , M5StickCPlus: 240x135 pixels
 int8_t lcd_brightness=8; // TFT backlight brightness for standby ( value: 7 - 15 )
 uint8_t graph_x_axis = 7; // X Coordinate for Vertical axis line
 uint8_t graph_y_axis[3] = {25,35,45}; // Y coordinates for X,Y,Z horizontal axis lines
@@ -56,9 +63,63 @@ float xy_vector_mag, x_vector_mag, y_vector_mag, z_vector_mag;
 float pga; // Peak Ground Acceleration
 // https://en.wikipedia.org/wiki/Peak_ground_acceleration
 // https://en.wikipedia.org/wiki/Japan_Meteorological_Agency_seismic_intensity_scale
-float pga_trigger = 0.025; // (g - m/s2)
+float pga_trigger; // (g - m/s2)
 
 MPU6886s seismo;
+
+/* Server Index Page */
+ 
+const char* serverIndex = 
+"<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
+"<title>SeismoM5</title>"
+"<h1>SeismoM5 OTA</h1>"
+"<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
+"<input type='file' name='update' id='file' onchange='sub(this)' style=display:none>"
+"<label id='file-input' for='file'>   Choose file...</label>"
+"<input type='submit' class=btn value='Update'>"
+"<br><br>"
+"<div id='prg'></div>"
+"<br><div id='prgbar'><div id='bar'></div></div><br></form>"
+"<script>"
+"function sub(obj){"
+"var fileName = obj.value.split('\\\\');"
+"document.getElementById('file-input').innerHTML = '   '+ fileName[fileName.length-1];"
+"};"
+"$('form').submit(function(e){"
+"e.preventDefault();"
+"var form = $('#upload_form')[0];"
+"var data = new FormData(form);"
+"$.ajax({"
+"url: '/update',"
+"type: 'POST',"
+"data: data,"
+"contentType: false,"
+"processData:false,"
+"xhr: function() {"
+"var xhr = new window.XMLHttpRequest();"
+"xhr.upload.addEventListener('progress', function(evt) {"
+"if (evt.lengthComputable) {"
+"var per = evt.loaded / evt.total;"
+"$('#prg').html('progress: ' + Math.round(per*100) + '%');"
+"$('#bar').css('width',Math.round(per*100) + '%');"
+"}"
+"}, false);"
+"return xhr;"
+"},"
+"success:function(d, s) {"
+"console.log('success!') "
+"},"
+"error: function (a, b, c) {"
+"}"
+"});"
+"});"
+"</script>"
+"<style>#file-input,input{width:100%;height:44px;border-radius:4px;margin:10px auto;font-size:15px}"
+"input{background:#f1f1f1;border:0;padding:0 15px}body{background:#3498db;font-family:sans-serif;font-size:14px;color:#777}"
+"#file-input{padding:0;border:1px solid #ddd;line-height:44px;text-align:left;display:block;cursor:pointer}"
+"#bar,#prgbar{background-color:#f1f1f1;border-radius:10px}#bar{background-color:#3498db;width:0%;height:10px}"
+"form{background:#fff;max-width:258px;margin:75px auto;padding:30px;border-radius:5px;text-align:center}"
+".btn{background:#3498db;color:#fff;cursor:pointer}h1{color:white;text-align:center;}</style>";
 
 void publish_available();
 void publish_state(String state);
@@ -148,10 +209,22 @@ void eq_happening() {
 #endif
 }
 
+void change_pga_trigger(float new_trigger) {
+  preferences.begin("seismom5", false);
+  preferences.putFloat("pga_trigger", new_trigger);
+  preferences.end();
+  pga_trigger = new_trigger;
+  M5.Lcd.setCursor(120,0);
+  M5.Lcd.print("     ");
+  publish_state("CHANGED_PGA");
+}
+
 void setup() {
   Serial.begin(115200);   // Initialize serial communication
   M5.begin();
-
+  preferences.begin("seismom5", true);
+  pga_trigger = preferences.getFloat("pga_trigger", 0.025);
+  preferences.end();
   pinMode(M5_LED, OUTPUT);
   digitalWrite(M5_LED, HIGH);
 #ifdef SPK_HAT
@@ -171,6 +244,38 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
+  // OTA Web Server
+  server.on("/", HTTP_GET, []() {
+    server.sendHeader("Connection", "close");
+    server.send(200, "text/html", serverIndex);
+  });
+  /*handling uploading firmware file */
+  server.on("/update", HTTP_POST, []() {
+    server.sendHeader("Connection", "close");
+    server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+    ESP.restart();
+  }, []() {
+    HTTPUpload& upload = server.upload();
+    if (upload.status == UPLOAD_FILE_START) {
+      Serial.printf("Update: %s\n", upload.filename.c_str());
+      if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { //start with max available size
+        Update.printError(Serial);
+      }
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+      /* flashing firmware to ESP*/
+      if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+        Update.printError(Serial);
+      }
+    } else if (upload.status == UPLOAD_FILE_END) {
+      if (Update.end(true)) { //true to set the size to the current progress
+        Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
+      } else {
+        Update.printError(Serial);
+      }
+    }
+  });
+  server.begin();
+
   Serial.println("Connecting to MQTT...");
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
@@ -182,10 +287,13 @@ void setup() {
   if (MQTT_active) mqttClient.connect();
 
   calibrate_MPU();
+  publish_event("16384","0","0","0.00"); // Init 1st retain event
+
 }
 
 void loop() {
   M5.update();
+  server.handleClient();
   seismo.getAccelAdc(&ax, &ay, &az);
 
   // EQ ends
@@ -194,6 +302,7 @@ void loop() {
     eq_time_count = 0;
 
     publish_state("LISTENING");
+    publish_event(String(ax),String(ay),String(az),String(pga));
 
     digitalWrite(M5_LED, HIGH);
 #ifdef SPK_HAT
@@ -209,10 +318,8 @@ void loop() {
   M5.Lcd.setCursor(2, 0);
   M5.Lcd.print("EARTHQUAKE SENSOR");
   M5.Lcd.setTextColor(WHITE,BLACK);
-  M5.Lcd.setCursor(137,0);
-  M5.Lcd.print("   ");
-  M5.Lcd.setCursor(137,0);
-  M5.Lcd.print((int)scale_factor);
+  M5.Lcd.setCursor(120,0);
+  M5.Lcd.printf("%.3f", pga_trigger);
 
   if (mqttClient.connected()) {
     M5.Lcd.setTextColor(YELLOW,PURPLE);
@@ -302,9 +409,15 @@ void onMqttPublish(uint16_t packetId) {
 }
 
 void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-  if ( (String(topic) == MQTT_PUB_STATE) && (String(payload) == "RESET")) {
+  if (String(topic) == MQTT_PUB_STATE) {
+    if (String(payload) == "RESET") {
       Serial.print("MQTT Restart Request Received");
-    ESP.restart();
+      ESP.restart();
+    } 
+  } else if (String(topic) == MQTT_PUB_CHANGE_PGA) {
+    Serial.print("MQTT Change PGA Trigger Request Received: ");
+    Serial.println(payload);
+    change_pga_trigger(atof(payload));
   }
 }
 
@@ -314,6 +427,7 @@ void onMqttConnect(bool sessionPresent) {
   publish_available();
   Serial.println(sessionPresent);
   uint16_t packetIdSub = mqttClient.subscribe(MQTT_PUB_STATE, 0);
+  uint16_t packetIdSub2 = mqttClient.subscribe(MQTT_PUB_CHANGE_PGA, 0);
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
