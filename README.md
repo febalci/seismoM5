@@ -82,3 +82,56 @@ You can connect the IP Address of SeismoM5 for an OTA Firmware Update.
 Seismologists mount accelerometer based seismic sensors to the lowest point of the structure, close to the ground as possible. However, since this is an amateur earthquake sensor, i mount it as high as possible in the house, on a wall. You can use the in-built magnets of M5StickC to attach it to a metal surface but as i experienced they are not so strong and may fall off during an earthquake. Double sided adhesive mounting tapes can also work, but make sure the wall paint is a stickable one. All in all, it should be mounted very firm and be careful about the x,y,z axis of the accelerometer; use a carpenters level if required. 
 
 ** Due to the screen position, x axis is used as z axis and z axis is used as x axis within the code.
+
+## Home Assistant Integration
+
+Here is the configuration that you should add to configuration.yaml:
+
+```
+mqtt:
+  sensor:
+    - name: "seismoM5_state"
+      state_topic: "m5seismo/state"
+      availability:
+        - topic: "m5seismo/status"
+          payload_available: "online"
+          payload_not_available: "offline"
+      icon: mdi:pulse
+    - name: "seismoM5_pga"
+      availability:
+        - topic: "m5seismo/status"
+          payload_available: "online"
+          payload_not_available: "offline"
+      state_topic: "m5seismo/event"
+      value_template: "{{ value_json.pga }}"
+      icon: mdi:pulse
+      unit_of_measurement: "g"
+
+  button:
+    - unique_id: seismom5_reset_btn
+      name: "Restart SeismoM5"
+      command_topic: "m5seismo/state"
+      payload_press: "RESET"
+      availability:
+        - topic: "m5seismo/status"
+      qos: 0
+      retain: false
+      entity_category: "config"
+      device_class: "restart"
+```
+
+and the earthquake warning automation for a pushover smart phone notification:
+
+```
+- alias: Earthquake
+  trigger:
+  - platform: state
+    entity_id: sensor.seismom5_state
+    from: "LISTENING"
+    to: "EARTHQUAKE"
+  action:
+  - service: notify.pushover
+    data_template:
+      message: >
+        EARTHQUAKE HAPPENING !!!
+```
