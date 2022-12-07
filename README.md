@@ -53,6 +53,8 @@ Button B of M5stickC resets M5StickC for recalibration purposes.
 
 **RESET:** Send a raw "RESET" message from anywhere to reset M5StickC for recalibration purposes.
 
+**UPDATE:** Send a raw "UPDATE" message from anywhere to receive momentary Event message.
+
 ### Events: m5seismo/event
 
 **{"x":"-85","y":"-1097","z":"16305","pga":"0.07"}**   <sup>Sample</sup>
@@ -69,7 +71,7 @@ or
 
 ### Events: m5seismo/change_pga
 
-Changes PGA trigger value. The first time SeismoM5 works after first upload, the default PGA Trigger value is 0.025 g. It can be changed with sending a float value to this topic in raw format, like sending a raw MQTT message 0.050 to m5seismo/change_pga topic to make the trigger value 0.05 g. If the PGA Trigger is ever changed, SeismoM5 saves this value permanently and use it from then on even after you reset SeismoM5. On screen top right corner shows the PGA Trigger value.
+Displays or changes PGA trigger value. The first time SeismoM5 works after the first upload, the default PGA Trigger value will be 0.025 g. It can be changed with sending a float value to this topic in raw format, like sending a raw MQTT message 0.050 to m5seismo/change_pga topic to make the trigger value 0.05 g. If the PGA Trigger is ever changed, SeismoM5 saves this value permanently and use it from then on even after you reset SeismoM5. On screen top right corner shows the PGA Trigger value.
 
 ## OTA Firmware Update
 
