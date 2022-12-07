@@ -24,7 +24,8 @@ const char* MQTT_PASS = "XXXXXXXX";
 #define MQTT_PUB_EVENT "m5seismo/event"
 #define MQTT_PUB_STATE  "m5seismo/state"
 #define MQTT_PUB_AVAILABILITY "m5seismo/status" // online or offline
-#define MQTT_PUB_CHANGE_PGA "m5seismo/change_pga" // change pga_trigger
+#define MQTT_PUB_PGA_TRIGGER "m5seismo2/pga_trigger" // change pga_trigger
+bool mqtt_disable_pga_publish;
 
 AsyncMqttClient mqttClient;
 
@@ -124,6 +125,7 @@ const char* serverIndex =
 void publish_available();
 void publish_state(String state);
 void publish_event(String x_mag, String y_mag, String z_mag, String pga_mag);
+void publish_pga();
 void onMqttPublish(uint16_t packetId);
 void onMqttConnect(bool sessionPresent);
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason);
@@ -216,7 +218,8 @@ void change_pga_trigger(float new_trigger) {
   pga_trigger = new_trigger;
   M5.Lcd.setCursor(120,0);
   M5.Lcd.print("     ");
-  publish_state("CHANGED_PGA");
+  publish_state("CHANGED_PGA_TRIGGER");
+  publish_state("LISTENING");
 }
 
 void setup() {
@@ -288,7 +291,11 @@ void setup() {
 
   calibrate_MPU();
   publish_event("16384","0","0","0.00"); // Init 1st retain event
-
+  mqtt_disable_pga_publish = false;
+  Serial.print("PGA TRIGGER:");
+  Serial.println(String(pga_trigger,3).c_str());
+  publish_pga();
+  mqtt_disable_pga_publish = true;
 }
 
 void loop() {
@@ -404,6 +411,10 @@ void publish_event(String x_mag, String y_mag, String z_mag, String pga_mag) {
     uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_EVENT, 0, true, msg.c_str());
 }
 
+void publish_pga() {
+      uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_PGA_TRIGGER, 1, true, String(pga_trigger,3).c_str());
+}
+
 void onMqttPublish(uint16_t packetId) {
 
 }
@@ -413,11 +424,20 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
     if (String(payload) == "RESET") {
       Serial.print("MQTT Restart Request Received");
       ESP.restart();
-    } 
-  } else if (String(topic) == MQTT_PUB_CHANGE_PGA) {
-    Serial.print("MQTT Change PGA Trigger Request Received: ");
-    Serial.println(payload);
-    change_pga_trigger(atof(payload));
+    } else if (String(payload) == "UPDATE") {
+      Serial.print("MQTT Update Request Received");
+      publish_event(String(ax),String(ay),String(az),String(pga));
+      publish_state("LISTENING");
+    }
+  } else if (String(topic) == MQTT_PUB_PGA_TRIGGER) {
+    if (mqtt_disable_pga_publish) {
+      float pga_request = atof(payload);
+      if (pga_request != pga_trigger) {
+        Serial.print("MQTT Change PGA Trigger Request Received: ");
+        Serial.println(payload);
+        change_pga_trigger(pga_request);
+      }
+    }
   }
 }
 
