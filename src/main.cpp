@@ -21,16 +21,16 @@ const char* MQTT_SERVER = "XXXXXXXX";
 const char* MQTT_PORT = "1883";
 const char* MQTT_USER = "XXXXXXXX";
 const char* MQTT_PASS = "XXXXXXXX";
-#define MQTT_PUB_EVENT "m5seismo2/event"
-#define MQTT_PUB_STATE  "m5seismo2/state"
-#define MQTT_PUB_AVAILABILITY "m5seismo2/status" // online or offline
-#define MQTT_PUB_PGA_TRIGGER "m5seismo2/pga_trigger" // change pga_trigger
+#define MQTT_PUB_EVENT "m5seismo/event"
+#define MQTT_PUB_STATE  "m5seismo/state"
+#define MQTT_PUB_AVAILABILITY "m5seismo/status" // online or offline
+#define MQTT_PUB_PGA_TRIGGER "m5seismo/pga_trigger" // change pga_trigger
 bool mqtt_disable_pga_publish;
 
 AsyncMqttClient mqttClient;
 
-// SPK HAT, Comment out this line if no SPK HAT is used
-#define SPK_HAT  
+// SPK HAT, uncomment out this line if SPK HAT is used
+// #define SPK_HAT   
 
 #ifdef SPK_HAT
   const int SPK_pin   = 26;
@@ -39,15 +39,15 @@ AsyncMqttClient mqttClient;
   int spkResolution   = 10;
 # endif
 
-// Graph - 160 x 80 TFT Screen; Coordinates for main screen:
-int8_t lcd_brightness=8; // TFT backlight brightness for standby ( value: 7 - 15 )
-uint8_t graph_x_axis = 7;
-uint8_t graph_y_axis[3] = {25,35,45};
+// Graph coordinates for main screen: M5StickC: 160x80 , M5StickCPlus: 240x135 pixels
+int8_t lcd_brightness=7; // TFT backlight brightness for standby ( value: 7 - 15 )
+uint8_t graph_x_axis = 7; // X Coordinate for Vertical axis line
+uint8_t graph_y_axis[3] = {25,35,45}; // Y coordinates for X,Y,Z horizontal axis lines
 uint8_t graph_y_axis_boundary = 5; // pixels
-uint8_t graph_x_start = 8;
+uint8_t graph_x_start = 8; // X Coordinate for where the graph starts (increases)
 uint8_t graph_x_limit = 155; // X Coordinate limit for graph
 uint8_t graph_scale = 50;
-bool continuous_graph = false; //Draw only when EQ happens
+bool continuous_graph = false; // false: Draw graph only when EQ happens
 uint8_t previous_graph_y[3];
 
 // MPU6886 Calibration Parameters
