@@ -1,6 +1,9 @@
 #include "MPU6886s.h"
-#include <M5StickC.h>
-// #include <Arduino.h>
+#ifdef STICKC
+  #include <M5StickC.h>
+#else
+  #include <M5StickCPlus.h>
+#endif
 #include <math.h>
 
 MPU6886s::MPU6886s() {
