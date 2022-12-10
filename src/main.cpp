@@ -1,4 +1,8 @@
-#include <M5StickC.h>
+#ifdef STICKC
+  #include <M5StickC.h>
+#else
+  #include <M5StickCPlus.h>
+#endif
 #include "MPU6886s.h"
 #include <WiFi.h>
 #include <AsyncMqttClient.h>
@@ -39,16 +43,33 @@ AsyncMqttClient mqttClient;
   int spkResolution   = 10;
 # endif
 
-// Graph coordinates for main screen: M5StickC: 160x80 , M5StickCPlus: 240x135 pixels
 int8_t lcd_brightness=7; // TFT backlight brightness for standby ( value: 7 - 15 )
 uint8_t graph_x_axis = 7; // X Coordinate for Vertical axis line
-uint8_t graph_y_axis[3] = {25,35,45}; // Y coordinates for X,Y,Z horizontal axis lines
-uint8_t graph_y_axis_boundary = 5; // pixels
 uint8_t graph_x_start = 8; // X Coordinate for where the graph starts (increases)
-uint8_t graph_x_limit = 155; // X Coordinate limit for graph
-uint8_t graph_scale = 50;
 bool continuous_graph = false; // false: Draw graph only when EQ happens
 uint8_t previous_graph_y[3];
+#ifdef STICKC
+  // Graph coordinates for main screen: M5StickC: 160x80
+  uint8_t graph_y_axis[3] = {25,35,45}; // Y coordinates for X,Y,Z horizontal axis lines
+  uint8_t graph_y_axis_boundary = 5; // pixels
+  uint8_t graph_x_limit = 155; // X Coordinate limit for graph
+  uint8_t graph_scale = 50;
+  uint8_t graph_clear_y_height = 37;
+  uint8_t pga_print_x = 120;
+  uint8_t mqtt_print_x = 132;
+  uint8_t mqtt_print_y = 70;
+#else
+  // Graph coordinates for main screen: M5StickCPlus: 240x135 pixels
+  uint8_t graph_y_axis[3] = {35,65,95}; // Y coordinates for X,Y,Z horizontal axis lines
+  uint8_t graph_y_axis_boundary = 15; // pixels
+  uint8_t graph_x_limit = 235; // X Coordinate limit for graph
+  uint8_t graph_scale = 150;
+  uint8_t graph_clear_y_height = 97;
+  uint8_t pga_print_x = 200;
+  uint8_t mqtt_print_x = 212;
+  uint8_t mqtt_print_y = 125;
+#endif
+
 
 // MPU6886 Calibration Parameters
 int buffersize=1000;     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
@@ -189,7 +210,7 @@ void draw_graph(float x_vector, float y_vector, float z_vector) {
     previous_graph_y[i] = y1[i];
     }
 
-    M5.Lcd.fillRect(graph_x_start+1, 15, 20, 40, BLACK);
+    M5.Lcd.fillRect(graph_x_start+1, 15, 20, graph_clear_y_height, BLACK);
     M5.Lcd.drawLine(graph_x_start, y0[0], graph_x_start+1, y1[0], RED);
     M5.Lcd.drawLine(graph_x_start, y0[1], graph_x_start+1, y1[1], GREEN);
     M5.Lcd.drawLine(graph_x_start, y0[2], graph_x_start+1, y1[2], BLUE);
@@ -216,7 +237,7 @@ void change_pga_trigger(float new_trigger) {
   preferences.putFloat("pga_trigger", new_trigger);
   preferences.end();
   pga_trigger = new_trigger;
-  M5.Lcd.setCursor(120,0);
+  M5.Lcd.setCursor(pga_print_x,0);
   M5.Lcd.print("     ");
   publish_state("CHANGED_PGA_TRIGGER");
   publish_state("LISTENING");
@@ -325,21 +346,21 @@ void loop() {
   M5.Lcd.setCursor(2, 0);
   M5.Lcd.print("EARTHQUAKE SENSOR");
   M5.Lcd.setTextColor(WHITE,BLACK);
-  M5.Lcd.setCursor(120,0);
+  M5.Lcd.setCursor(pga_print_x,0);
   M5.Lcd.printf("%.3f", pga_trigger);
 
   if (mqttClient.connected()) {
     M5.Lcd.setTextColor(YELLOW,PURPLE);
-    M5.Lcd.setCursor(132,70);
+    M5.Lcd.setCursor(mqtt_print_x,mqtt_print_y);
     M5.Lcd.print("MQTT");
   } else {
     M5.Lcd.setTextColor(WHITE,BLACK);
-    M5.Lcd.setCursor(132,70);
+    M5.Lcd.setCursor(mqtt_print_x,mqtt_print_y);
     M5.Lcd.print("    ");
   }
-
+  
   // Draw Graph Axis
-  M5.Lcd.drawFastVLine(7,15,40,WHITE);
+  M5.Lcd.drawFastVLine(7,15,graph_clear_y_height+3,WHITE);
   // Draw Tickmarks
   for (int i = 0; i < 3 ; i++) {
     M5.Lcd.drawFastHLine(5,graph_y_axis[i],2,WHITE);
@@ -364,7 +385,7 @@ void loop() {
 */
 
   M5.Lcd.setTextColor(WHITE,BLACK);
-  M5.Lcd.setCursor(2, 60);
+  M5.Lcd.setCursor(2, mqtt_print_y);
   M5.Lcd.printf("PGA: %.5f  (g)", pga);
 
 
