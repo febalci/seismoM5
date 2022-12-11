@@ -26,7 +26,7 @@ The triggering mechanism is, if PGA exceeds limit, that is an earthquake. PGA gi
 
 ## Usage
 
-This is a Platformio code. First of all, the user needs to fill WiFi and MQTT server details in main.cpp. Other parameters like Seismic, MPU calibration or screen properties can be changed for best fit after some tests and trials.
+This is a Platformio code. First of all, the user needs to fill WiFi and MQTT server details in main.cpp. Other parameters like Seismic, MPU calibration or screen properties can be changed for best fit after some tests and trials. Also for M5stickC select **env:M5stick-c** and for M5StickC-Plus select **env:M5stick-c-plus** in Platformio.
 
 Button A of M5stickC toggles MQTT server connection. If bottom right corner of the screen shows MQTT, the server is connected.
 
