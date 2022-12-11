@@ -56,7 +56,7 @@ uint8_t previous_graph_y[3];
   uint8_t graph_scale = 50;
   uint8_t graph_clear_y_height = 37;
   uint8_t pga_print_x = 120;
-  uint8_t mqtt_print_x = 132;
+  uint8_t mqtt_print_x = 120;
   uint8_t mqtt_print_y = 70;
 #else
   // Graph coordinates for main screen: M5StickCPlus: 240x135 pixels
@@ -66,7 +66,7 @@ uint8_t previous_graph_y[3];
   uint8_t graph_scale = 150;
   uint8_t graph_clear_y_height = 97;
   uint8_t pga_print_x = 200;
-  uint8_t mqtt_print_x = 212;
+  uint8_t mqtt_print_x = 200;
   uint8_t mqtt_print_y = 125;
 #endif
 
@@ -157,27 +157,43 @@ void calibrate_MPU() {
   publish_state("INIT_MPU");
   seismo.Init();
 
+  publish_state("WAIT");
   M5.Lcd.setRotation(1);
   M5.Lcd.fillScreen(BLACK);
   M5.Lcd.setTextColor(WHITE,BLACK);
   M5.Lcd.setTextSize(2);
+
+#ifdef STICKC
   M5.Lcd.setCursor(2, 5);
   M5.Lcd.print("PREPARE FOR");
   M5.Lcd.setCursor(17, 35);
   M5.Lcd.print("CALIBRATION");
-  publish_state("WAIT");
-  //Progress bar
   M5.Lcd.drawRect(32,60,100,10,YELLOW);
   for (int i = 0; i <= 9; i++) { // Wait 10 secs
     delay(1000);
     M5.Lcd.fillRect(32+(i*10),60,10,10,YELLOW);
   }
+#else
+  M5.Lcd.setCursor(60, 25);
+  M5.Lcd.print("PREPARE FOR");
+  M5.Lcd.setCursor(60, 55);
+  M5.Lcd.print("CALIBRATION");
+  M5.Lcd.drawRect(72,110,100,15,YELLOW);
+  for (int i = 0; i <= 9; i++) { // Wait 10 secs
+    delay(1000);
+    M5.Lcd.fillRect(72+(i*10),110,10,15,YELLOW);
+  }
+#endif // 160x80-240x135
 
   Serial.println("Setting MPU6886 Range +/- 2g");
   seismo.SetAccelFsr(seismo.AFS_2G);
 
   M5.Lcd.fillScreen(BLACK);
+#ifdef STICKC
   M5.Lcd.setTextSize(1);
+#else
+  M5.Lcd.setTextSize(2);
+#endif
   M5.Lcd.setCursor(2, 5);
   M5.Lcd.print("Calibrating...");
   M5.Lcd.setTextSize(2);
