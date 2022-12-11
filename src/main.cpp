@@ -56,6 +56,7 @@ uint8_t previous_graph_y[3];
   uint8_t graph_scale = 50;
   uint8_t graph_clear_y_height = 37;
   uint8_t pga_print_x = 120;
+  uint8_t pga_print_y = 0;
   uint8_t mqtt_print_x = 120;
   uint8_t mqtt_print_y = 70;
 #else
@@ -66,6 +67,7 @@ uint8_t previous_graph_y[3];
   uint8_t graph_scale = 150;
   uint8_t graph_clear_y_height = 97;
   uint8_t pga_print_x = 200;
+  uint8_t pga_print_y = 2;
   uint8_t mqtt_print_x = 200;
   uint8_t mqtt_print_y = 125;
 #endif
@@ -253,7 +255,7 @@ void change_pga_trigger(float new_trigger) {
   preferences.putFloat("pga_trigger", new_trigger);
   preferences.end();
   pga_trigger = new_trigger;
-  M5.Lcd.setCursor(pga_print_x,0);
+  M5.Lcd.setCursor(pga_print_x,pga_print_y);
   M5.Lcd.print("     ");
   publish_state("CHANGED_PGA_TRIGGER");
   publish_state("LISTENING");
@@ -359,10 +361,10 @@ void loop() {
 
   M5.Lcd.setTextSize(1);
   M5.Lcd.setTextColor(GREEN,BLACK);
-  M5.Lcd.setCursor(2, 0);
+  M5.Lcd.setCursor(2, pga_print_y);
   M5.Lcd.print("EARTHQUAKE SENSOR");
   M5.Lcd.setTextColor(WHITE,BLACK);
-  M5.Lcd.setCursor(pga_print_x,0);
+  M5.Lcd.setCursor(pga_print_x,pga_print_y);
   M5.Lcd.printf("%.3f", pga_trigger);
 
   if (mqttClient.connected()) {
