@@ -266,11 +266,22 @@ void onWifiEvent(WiFiEvent_t event) {
     case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED:
       Serial.println("Connected or reconnected to WiFi");
       break;
+    case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP:
+      Serial.println("");
+      Serial.print("Connected to ");
+      Serial.println(WIFI_SSID);
+      Serial.print("IP address: ");
+      Serial.println(WiFi.localIP());
+      Serial.println("Connecting to MQTT...");
+      if (MQTT_active) mqttClient.connect();
+      break;
     case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
       Serial.println("WiFi Disconnected. Enabling WiFi autoconnect");
+      delay(3000);
 //      WiFi.setAutoReconnect(true);
-//      break;
-      ESP.restart();
+//      ESP.restart();
+      WiFi.reconnect();
+      break;
     default: break;
   }
 }
@@ -283,11 +294,21 @@ void setup() {
   preferences.end();
   pinMode(M5_LED, OUTPUT);
   digitalWrite(M5_LED, HIGH);
+  
 #ifdef SPK_HAT
   ledcSetup(spkChannel, spkFreq, spkResolution);
   ledcAttachPin(SPK_pin, spkChannel);
   ledcWriteTone(spkChannel, 0);
 #endif
+  
+  mqttClient.onConnect(onMqttConnect);
+  mqttClient.onDisconnect(onMqttDisconnect);
+  mqttClient.onPublish(onMqttPublish);
+  mqttClient.onMessage(onMqttMessage);
+  mqttClient.setWill(MQTT_PUB_AVAILABILITY, 1, true, "offline");
+  mqttClient.setServer(MQTT_SERVER, atoi(MQTT_PORT));
+  mqttClient.setCredentials(MQTT_USER, MQTT_PASS);
+
   Serial.println("WiFi Connecting...");
   WiFi.mode(WIFI_STA);
   WiFi.onEvent(onWifiEvent);
@@ -296,11 +317,6 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(WIFI_SSID);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
 
 // OTA Web Server
   server.on("/", HTTP_GET, []() {
@@ -333,16 +349,6 @@ void setup() {
     }
   });
   server.begin();
-
-  Serial.println("Connecting to MQTT...");
-  mqttClient.onConnect(onMqttConnect);
-  mqttClient.onDisconnect(onMqttDisconnect);
-  mqttClient.onPublish(onMqttPublish);
-  mqttClient.onMessage(onMqttMessage);
-  mqttClient.setWill(MQTT_PUB_AVAILABILITY, 1, true, "offline");
-  mqttClient.setServer(MQTT_SERVER, atoi(MQTT_PORT));
-  mqttClient.setCredentials(MQTT_USER, MQTT_PASS);
-  if (MQTT_active) mqttClient.connect();
 
   calibrate_MPU();
   publish_event("16384","0","0","0.00"); // Init 1st retain event
