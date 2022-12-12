@@ -262,17 +262,17 @@ void change_pga_trigger(float new_trigger) {
 }
 
 void onWifiEvent(WiFiEvent_t event) {
-        switch (event) {
-                case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED:
-                        Serial.println("Connected or reconnected to WiFi");
-                        break;
-                case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-                        Serial.println("WiFi Disconnected. Enabling WiFi autoconnect");
-//			WiFi.setAutoReconnect(true);
-//			break;
-                        ESP.restart();
-                default: break;
-         }
+  switch (event) {
+    case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED:
+      Serial.println("Connected or reconnected to WiFi");
+      break;
+    case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+      Serial.println("WiFi Disconnected. Enabling WiFi autoconnect");
+//      WiFi.setAutoReconnect(true);
+//      break;
+      ESP.restart();
+    default: break;
+  }
 }
 
 void setup() {
@@ -288,9 +288,9 @@ void setup() {
   ledcAttachPin(SPK_pin, spkChannel);
   ledcWriteTone(spkChannel, 0);
 #endif
-  WiFi.onEvent(onWifiEvent);
   Serial.println("WiFi Connecting...");
   WiFi.mode(WIFI_STA);
+  WiFi.onEvent(onWifiEvent);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
