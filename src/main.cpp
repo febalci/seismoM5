@@ -272,6 +272,7 @@ void setup() {
 #ifdef SPK_HAT
   ledcSetup(spkChannel, spkFreq, spkResolution);
   ledcAttachPin(SPK_pin, spkChannel);
+  ledcWriteTone(spkChannel, 0);
 #endif
   Serial.println("WiFi Connecting...");
   WiFi.mode(WIFI_STA);
