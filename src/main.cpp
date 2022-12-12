@@ -261,6 +261,19 @@ void change_pga_trigger(float new_trigger) {
   publish_state("LISTENING");
 }
 
+void onWifiEvent(WiFiEvent_t event) {
+	switch (event) {
+		case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED:
+			Serial.println("Connected or reconnected to WiFi");
+			break;
+		case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+			Serial.println("WiFi Disconnected. Enabling WiFi autoconnect");
+			WiFi.setAutoReconnect(true);
+			break;
+		default: break;
+  }
+}
+
 void setup() {
   Serial.begin(115200);   // Initialize serial communication
   M5.begin();
@@ -274,6 +287,7 @@ void setup() {
   ledcAttachPin(SPK_pin, spkChannel);
   ledcWriteTone(spkChannel, 0);
 #endif
+  WiFi.onEvent(onWifiEvent);
   Serial.println("WiFi Connecting...");
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
