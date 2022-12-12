@@ -262,16 +262,17 @@ void change_pga_trigger(float new_trigger) {
 }
 
 void onWifiEvent(WiFiEvent_t event) {
-	switch (event) {
-		case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED:
-			Serial.println("Connected or reconnected to WiFi");
-			break;
-		case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-			Serial.println("WiFi Disconnected. Enabling WiFi autoconnect");
-			WiFi.setAutoReconnect(true);
-			break;
-		default: break;
-  }
+        switch (event) {
+                case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED:
+                        Serial.println("Connected or reconnected to WiFi");
+                        break;
+                case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+                        Serial.println("WiFi Disconnected. Enabling WiFi autoconnect");
+//			WiFi.setAutoReconnect(true);
+//			break;
+                        ESP.restart();
+                default: break;
+         }
 }
 
 void setup() {
