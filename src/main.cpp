@@ -25,10 +25,13 @@ const char* MQTT_SERVER = "XXXXXXXX";
 const char* MQTT_PORT = "1883";
 const char* MQTT_USER = "XXXXXXXX";
 const char* MQTT_PASS = "XXXXXXXX";
-#define MQTT_PUB_EVENT "m5seismo/event"
-#define MQTT_PUB_STATE  "m5seismo/state"
-#define MQTT_PUB_AVAILABILITY "m5seismo/status" // online or offline
-#define MQTT_PUB_PGA_TRIGGER "m5seismo/pga_trigger" // change pga_trigger
+
+#define MQTT_PUB_TOPIC_MAIN "m5seismo"
+
+#define MQTT_PUB_EVENT (MQTT_PUB_TOPIC_MAIN "/event")
+#define MQTT_PUB_STATE  (MQTT_PUB_TOPIC_MAIN "/state")
+#define MQTT_PUB_AVAILABILITY (MQTT_PUB_TOPIC_MAIN "/status") // online or offline
+#define MQTT_PUB_PGA_TRIGGER (MQTT_PUB_TOPIC_MAIN "/pga_trigger") // change pga_trigger
 bool mqtt_disable_pga_publish;
 
 AsyncMqttClient mqttClient;
