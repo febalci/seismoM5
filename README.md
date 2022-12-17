@@ -69,9 +69,9 @@ or
 
 [Japan Meteorological Agency seismic intensity scale](https://en.wikipedia.org/wiki/Japan_Meteorological_Agency_seismic_intensity_scale#Scale_overview)
 
-### Events: m5seismo/change_pga
+### Events: m5seismo/pga_trigger
 
-Displays or changes PGA trigger value. The first time SeismoM5 works after the first upload, the default PGA Trigger value will be 0.025 g. It can be changed with sending a float value to this topic in raw format, like sending a raw MQTT message 0.050 to m5seismo/change_pga topic to make the trigger value 0.05 g. If the PGA Trigger is ever changed, SeismoM5 saves this value permanently and use it from then on even after you reset SeismoM5. On screen top right corner shows the PGA Trigger value.
+Displays or changes PGA trigger value. The first time SeismoM5 works after the first upload, the default PGA Trigger value will be 0.025 g. It can be changed with sending a float value to this topic in raw format, like sending a raw MQTT message 0.050 to m5seismo/pga_trigger topic to make the trigger value 0.05 g. If the PGA Trigger is ever changed, SeismoM5 saves this value permanently and use it from then on even after you reset SeismoM5. On screen top right corner shows the PGA Trigger value.
 
 ## OTA Firmware Update
 
