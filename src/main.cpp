@@ -10,6 +10,7 @@
 #include <Update.h>
 #include <Preferences.h>
 #include <stdlib.h>
+#include "FreeFonts.h"
 
 Preferences preferences; // To store and read pga_trigger
 
@@ -60,7 +61,7 @@ uint8_t previous_graph_y[3];
   uint8_t graph_clear_y_height = 37;
   uint8_t pga_print_x = 120;
   uint8_t pga_print_y = 0;
-  uint8_t mqtt_print_x = 120;
+  uint8_t mqtt_print_x = 130; // 120 for text size 1
   uint8_t mqtt_print_y = 70;
 #else
   // Graph coordinates for main screen: M5StickCPlus: 240x135 pixels
@@ -190,8 +191,8 @@ void calibrate_MPU() {
   }
 #endif // 160x80-240x135
 
-  Serial.println("Setting MPU6886 Range +/- 2g");
-  seismo.SetAccelFsr(seismo.AFS_2G);
+//  Serial.println("Setting MPU6886 Range +/- 2g");
+//  seismo.SetAccelFsr(seismo.AFS_2G);
 
   M5.Lcd.fillScreen(BLACK);
 #ifdef STICKC
@@ -282,8 +283,8 @@ void onWifiEvent(WiFiEvent_t event) {
       Serial.println("WiFi Disconnected. Enabling WiFi autoconnect");
       delay(3000);
 //      WiFi.setAutoReconnect(true);
-//      ESP.restart();
-      WiFi.reconnect();
+      ESP.restart();
+//      WiFi.reconnect();
       break;
     default: break;
   }
@@ -426,11 +427,16 @@ void loop() {
   Serial.print("PGA: ");
   Serial.printf("%.5f", pga);
 */
-
   M5.Lcd.setTextColor(WHITE,BLACK);
   M5.Lcd.setCursor(2, mqtt_print_y);
-  M5.Lcd.printf("PGA: %.5f  (g)", pga);
-
+  M5.Lcd.print("PGA: ");
+  M5.Lcd.setCursor(mqtt_print_x-35, mqtt_print_y);
+  M5.Lcd.print("(g)");
+  M5.Lcd.fillRect(29,mqtt_print_y-7,mqtt_print_x-68,14,BLACK);
+  M5.Lcd.setCursor(30, mqtt_print_y+5);
+  M5.Lcd.setFreeFont(FSSB9);  // Select Free Sans Serif Bold 9pt font  
+  M5.Lcd.printf("%.4f", pga);
+  M5.Lcd.setTextFont(1);
 
 // EARTHQUAKE!!!
 //  if (xy_vector_mag >= 1.0 || z_abs_vector_mag >= 1.0) {
