@@ -130,6 +130,10 @@ int MPU6886s::Init(void) {
     delay(100);
     getGres();
     getAres();
+  
+    setXAccelOffset(0);
+    setYAccelOffset(0);
+    setZAccelOffset(0);
     return 0;
 }
 
