@@ -37,52 +37,56 @@ int MPU6886s::Init(void) {
 
     Wire1.begin(21, 22);
 
-// 0x75: Check if correct device
+// 0x75, REGISTER 117 – WHOMI: Check if correct device
     I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_WHOAMI, 1, tempdata);
     if (tempdata[0] != 0x19) return -1;
     delay(1);
 
-// 0x6B:
+// 0x6B, REGISTER 107 – POWER MANAGEMENT 1:
     regdata = 0x00;
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_1, 1, &regdata);
     delay(10);
 
-// 0x6B: Reset internal registers
+// 0x6B, REGISTER 107 – POWER MANAGEMENT 1: Reset internal registers
     regdata = (0x01 << 7);
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_1, 1, &regdata);
     delay(10);
 
-// 0x6B: Internal 20MHz oscillator
+// 0x6B, REGISTER 107 – POWER MANAGEMENT 1: Internal 20MHz oscillator
     regdata = (0x01 << 0);
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_1, 1, &regdata);
     delay(10);
 
-// 0x1C: 0b00010000 : Select +-8g for accel
-    regdata = 0x10;
+// 0x1C, REGISTER 28 – ACCELEROMETER CONFIGURATION: 0b00010000 : Select +-2g for accel
+    regdata = 0x00;
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_CONFIG, 1, &regdata);
     delay(1);
 
-// 0x1B: 0b00011000 : Select +-2000dps for gyro
-    regdata = 0x18;
+// 0x1B,REGISTER 27 – GYROSCOPE CONFIGURATION: 0b00011000 : Select +-250dps for gyro
+    regdata = 0x00;
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_GYRO_CONFIG, 1, &regdata);
     delay(1);
 
-// 0x1A: DLPF_CFG - 1kHz
-    regdata = 0x01;
+// 0x1A,REGISTER 26 – CONFIGURATION: DLPF_CFG - 1kHz
+    regdata = 0x00; // 0x01
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_CONFIG, 1, &regdata);
     delay(1);
 
-// 0X19: Sample Rate Divider - SAMPLE_RATE = INTERNAL_SAMPLE_RATE / (1 + SMPLRT_DIV) Where INTERNAL_SAMPLE_RATE = 1 kHz
-    regdata = 0x05;
-    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_SMPLRT_DIV, 1, &regdata);
-    delay(1);
+// 0X19, REGISTER 25 – SAMPLE RATE DIVIDER: Sample Rate Divider - SAMPLE_RATE = INTERNAL_SAMPLE_RATE / (1 + SMPLRT_DIV) Where INTERNAL_SAMPLE_RATE = 1 kHz
+//    regdata = 0x05;
+//    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_SMPLRT_DIV, 1, &regdata);
+//    delay(1);
 
-// 0x38
+// 0x38, REGISTER 56 – INTERRUPT ENABLE
     regdata = 0x00;
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_INT_ENABLE, 1, &regdata);
     delay(1);
 
-/* 0x1D
+// Disable Gyrometer
+regdata = 0b00000111;  // set gyro x, y, and z to disable
+I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_2, 1, &regdata);
+
+/* 0x1D, REGISTER 29 – ACCELEROMETER CONFIGURATION 2
  * ACCEL_FCHOICE_B | A_DLPF_CFG | 3-DB BW(HZ)  | NOISE BW(HZ) | RATE(KHZ)
  * ----------------+------------+--------------+--------------+-----------
  * 1               | X          | 1046.0       | 1100.0       | 4
@@ -95,9 +99,6 @@ int MPU6886s::Init(void) {
  * 0               | 6          | 5.1          | 7.8          | 1
  * 0               | 7          | 420.0        | 441.6        | 1
  */
-    // Disable Gyrometer
-    regdata = 0b00000111;  // set gyro x, y, and z to disable
-    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_2, 1, &regdata);
 
     /* Step 2: Set Accelerometer LPF bandwidth to 218.1 Hz
         • In ACCEL_CONFIG2 register (0x1D) set ACCEL_FCHOICE_B = 0 and
@@ -108,24 +109,24 @@ int MPU6886s::Init(void) {
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_CONFIG2, 1, &regdata);
     delay(1);
 
-// 0x6A: 
+// 0x6A, REGISTER 106 – USER CONTROL:
     regdata = 0x00;
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_USER_CTRL, 1, &regdata);
     delay(1);
 
-// 0x23: 
+// 0x23, REGISTER 35 – FIFO ENABLE:
     regdata = 0x00;
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_FIFO_EN, 1, &regdata);
     delay(1);
 
-// 0x37: 
-    regdata = 0x22;
-    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_INT_PIN_CFG, 1, &regdata);
-    delay(1);
+// 0x37, REGISTER 55 – INT/DRDY PIN / BYPASS ENABLE CONFIGURATION:
+//    regdata = 0x22;
+//    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_INT_PIN_CFG, 1, &regdata);
+//    delay(1);
 
-// 0x38: 
-    regdata = 0x01;
-    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_INT_ENABLE, 1, &regdata);
+// 0x38, 8.26 REGISTER 56 – INTERRUPT ENABLE:
+//    regdata = 0x01;
+//    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_INT_ENABLE, 1, &regdata);
 
     delay(100);
     getGres();
