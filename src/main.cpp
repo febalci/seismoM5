@@ -76,7 +76,6 @@ uint8_t previous_graph_y[3];
   uint8_t mqtt_print_y = 125;
 #endif
 
-
 // MPU6886 Calibration Parameters
 int buffersize=1000;     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
 int acel_deadzone=8;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
@@ -92,6 +91,7 @@ float pga; // Peak Ground Acceleration
 // https://en.wikipedia.org/wiki/Peak_ground_acceleration
 // https://en.wikipedia.org/wiki/Japan_Meteorological_Agency_seismic_intensity_scale
 float pga_trigger; // (g - m/s2)
+uint16_t flush_event = 0;
 
 MPU6886s seismo;
 
@@ -151,7 +151,7 @@ const char* serverIndex =
 
 void publish_available();
 void publish_state(String state);
-void publish_event(String x_mag, String y_mag, String z_mag, String pga_mag);
+void publish_event(int16_t x_mag, int16_t y_mag, int16_t z_mag, float pga_mag);
 void publish_pga();
 void onMqttPublish(uint16_t packetId);
 void onMqttConnect(bool sessionPresent);
@@ -322,6 +322,12 @@ void setup() {
     Serial.print(".");
   }
 
+  mqtt_disable_pga_publish = false;
+  publish_pga();
+  publish_event(16384, 0, 0, 0.00); // Init 1st retain event
+  Serial.print("PGA TRIGGER:");
+  Serial.println(String(pga_trigger,3).c_str());
+  
 // OTA Web Server
   server.on("/", HTTP_GET, []() {
     server.sendHeader("Connection", "close");
@@ -355,12 +361,9 @@ void setup() {
   server.begin();
 
   calibrate_MPU();
-  publish_event("16384","0","0","0.00"); // Init 1st retain event
-  mqtt_disable_pga_publish = false;
-  Serial.print("PGA TRIGGER:");
-  Serial.println(String(pga_trigger,3).c_str());
-  publish_pga();
+
   mqtt_disable_pga_publish = true;
+  Serial.println("LISTENING...");
 }
 
 void loop() {
@@ -374,7 +377,7 @@ void loop() {
     eq_time_count = 0;
 
     publish_state("LISTENING");
-    publish_event(String(ax),String(ay),String(az),String(pga));
+    publish_event(ax, ay, az, pga);
 
     digitalWrite(M5_LED, HIGH);
 #ifdef SPK_HAT
@@ -439,13 +442,18 @@ void loop() {
   M5.Lcd.setTextFont(1);
 
 // EARTHQUAKE!!!
-//  if (xy_vector_mag >= 1.0 || z_abs_vector_mag >= 1.0) {
   if (pga >= pga_trigger) {
     eq_happening();
   }
 
   if (eq_status) {
-    publish_event(String(ax),String(ay),String(az),String(pga));
+    publish_event(ax, ay, az, pga);
+  } else {
+    flush_event++;
+    if (flush_event > 300) { // 30 Seconds
+      publish_event(ax, ay, az, pga);
+      flush_event = 0;
+    }
   }
 
   if (M5.BtnA.wasPressed()) {
@@ -467,7 +475,6 @@ void loop() {
   delay(100);
 }
 
-
 void publish_available() {
       uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_AVAILABILITY, 1, true, String("online").c_str());
 }
@@ -476,8 +483,8 @@ void publish_state(String state) {
       uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_STATE, 1, true, state.c_str());
 }
 
-void publish_event(String x_mag, String y_mag, String z_mag, String pga_mag) {
-    String msg = "{\"x\":\""+x_mag + "\",\"y\":\"" + y_mag + "\",\"z\":\"" + z_mag + "\",\"pga\":\""+ pga_mag +"\"}";
+void publish_event(int16_t x_mag, int16_t y_mag, int16_t z_mag, float pga_mag) {
+    String msg = "{\"x\":\""+ String(x_mag) + "\",\"y\":\"" + String(y_mag) + "\",\"z\":\"" + String(z_mag) + "\",\"pga\":\""+ String(pga_mag,4).c_str() +"\"}";
     uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_EVENT, 0, true, msg.c_str());
 }
 
@@ -500,7 +507,7 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
       publish_state("LISTENING");
     }
   } else if (String(topic) == MQTT_PUB_PGA_TRIGGER) {
-    if (mqtt_disable_pga_publish) {
+    if (mqtt_disable_pga_publish && (payload != NULL)) {
       float pga_request = atof(payload);
       if (pga_request != pga_trigger) {
         Serial.print("MQTT Change PGA Trigger Request Received: ");
