@@ -35,17 +35,17 @@ const char* MQTT_PASS = "XXXXXXXX";
 #define MQTT_PUB_COMMAND (MQTT_PUB_TOPIC_MAIN "/command")
 
 // SPK HAT, default disabled
-bool SPK_HAT = false;
+bool SPK_HAT;
 const int SPK_pin   = 26;
 int spkChannel      = 0;
 int spkFreq         = 50;
 int spkResolution   = 10;
 
 // Screen coordinates
-int8_t lcd_brightness=7; // TFT backlight brightness for standby ( value: 7 - 15 )
+int8_t lcd_brightness; // TFT backlight brightness for standby ( value: 7 - 15 )
 uint8_t graph_x_axis = 7; // X Coordinate for Vertical axis line
 uint8_t graph_x_start = 8; // X Coordinate for where the graph starts (increases)
-bool continuous_graph = false; // false: Draw graph only when EQ happens
+bool continuous_graph; // false: Draw graph only when EQ happens
 uint8_t previous_graph_y[3];
 #ifdef STICKC
   // Graph coordinates for main screen: M5StickC: 160x80
@@ -78,7 +78,7 @@ int acel_deadzone=8;     //Acelerometer error allowed, make it lower to get more
 // Seismic Measuring Variables
 float scale_factor = 1; // scale_factor
 uint8_t eq_pet = 40; // Post Event Time (Around 5 secs)
-uint16_t flush_period = 30; //seconds
+uint16_t flush_period; //seconds
 
 bool eq_status = false;
 int eq_time_count;
@@ -297,7 +297,12 @@ void setup() {
   M5.begin();
   preferences.begin("seismom5", true);
   pga_trigger = preferences.getFloat("pga_trigger", 0.025);
+  SPK_HAT = preferences.getBool("spk_hat", false);
+  lcd_brightness = preferences.getUInt("brightness", 7);
+  continuous_graph = preferences.getBool("continuous", false);
+  flush_period = preferences.getUShort("period", 300);
   preferences.end();
+
   pinMode(M5_LED, OUTPUT);
   digitalWrite(M5_LED, HIGH);
   
@@ -533,24 +538,36 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
 
     if (doc["speaker_enable"] != nullptr) {
       SPK_HAT = doc["speaker_enable"];
+      preferences.begin("seismom5", false);
+      preferences.putBool("spk_hat", SPK_HAT);
+      preferences.end();
       Serial.print("MQTT Speaker Request Enabled: ");
       Serial.println(SPK_HAT);
     }
 
     if (doc["lcd_brightness"] != nullptr) {
       lcd_brightness = doc["lcd_brightness"];
+      preferences.begin("seismom5", false);
+      preferences.putUInt("brightness", lcd_brightness);
+      preferences.end();
       Serial.print("MQTT LCD Standby Brightness: ");
       Serial.println(lcd_brightness);
     }
 
     if (doc["continuous_graph"] != nullptr) {
       continuous_graph = doc["continuous_graph"];
+      preferences.begin("seismom5", false);
+      preferences.putBool("continuous", continuous_graph);
+      preferences.end();
       Serial.print("MQTT Continuous Graph Enabled: ");
       Serial.println(continuous_graph);
     }
     
     if (doc["update_period"] != nullptr) {
       flush_period = doc["update_period"];
+      preferences.begin("seismom5", false);
+      preferences.putUShort("period", flush_period);
+      preferences.end();
       Serial.print("MQTT Update Period: ");
       Serial.print(flush_period);
       Serial.println(" secs.");
