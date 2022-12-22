@@ -74,6 +74,8 @@ Displays PGA trigger value for the earthquake alert. The first time SeismoM5 wor
 
 
 ### Commands: m5seismo/command
+
+Should be send in JSON format as follows: 
 ```
 {
     "pga_trigger": 0.0150,
@@ -85,6 +87,8 @@ Displays PGA trigger value for the earthquake alert. The first time SeismoM5 wor
     "update_period" : 30
 }
 ```
+There is no need to send this full message, any item can be send standalone or together with any other item.
+
 **"pga_trigger" : *float***  - Changes the PGA Trigger. If the PGA Trigger is ever changed, SeismoM5 saves this value permanently and use it from then on even after you reset SeismoM5.
 
 **"reset" : *bool***  - If true, resets M5StickC for recalibration purposes.
