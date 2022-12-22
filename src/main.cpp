@@ -282,7 +282,7 @@ void onWifiEvent(WiFiEvent_t event) {
       if (MQTT_active) mqttClient.connect();
       break;
     case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-      Serial.println("WiFi Disconnected. Enabling WiFi autoconnect");
+      Serial.println("WiFi Disconnected. Restarting...");
       delay(3000);
 //      WiFi.setAutoReconnect(true);
       ESP.restart();
@@ -524,14 +524,14 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
 
     if (doc["reset"] != nullptr) {
       if (doc["reset"]) {
-        Serial.print("MQTT Restart Request Received");
+        Serial.println("MQTT Restart Request Received");
         ESP.restart();
       }
     }
 
     if (doc["update"] != nullptr) {
       if (doc["update"]) {
-      Serial.print("MQTT Update Request Received");
+      Serial.println("MQTT Update Request Received");
       publish_event(ax, ay, az, pga);
       }
     }
@@ -552,6 +552,7 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
       preferences.end();
       Serial.print("MQTT LCD Standby Brightness: ");
       Serial.println(lcd_brightness);
+      M5.Axp.ScreenBreath(lcd_brightness);
     }
 
     if (doc["continuous_graph"] != nullptr) {
