@@ -300,7 +300,7 @@ void setup() {
   SPK_HAT = preferences.getBool("spk_hat", false);
   lcd_brightness = preferences.getUInt("brightness", 7);
   continuous_graph = preferences.getBool("continuous", false);
-  flush_period = preferences.getUShort("period", 300);
+  flush_period = preferences.getUShort("period", 30);
   preferences.end();
 
   pinMode(M5_LED, OUTPUT);
