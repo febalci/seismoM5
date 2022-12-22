@@ -41,6 +41,7 @@ Button B of M5stickC resets M5StickC for recalibration purposes.
 
 "**online**" or "**offline**"
 
+
 ### State: m5seismo/state
 
 **INIT_MPU:** Init MPU6886.
@@ -51,13 +52,10 @@ Button B of M5stickC resets M5StickC for recalibration purposes.
 
 **LISTENING:** Everything is ready and listening for earthquakes.
 
-**RESET:** Send a raw "RESET" message from anywhere to reset M5StickC for recalibration purposes.
-
-**UPDATE:** Send a raw "UPDATE" message from anywhere to receive momentary Event message.
 
 ### Events: m5seismo/event
 
-**{"x":"-85","y":"-1097","z":"16305","pga":"0.07"}**   <sup>Sample</sup>
+**{"x":"-85","y":"-1097","z":"16305","pga":"0.0007"}**   <sup>Sample</sup>
 
 Momentary x,y,z parameters and PGA in (g). Only send while an earthquake occurs.
 
@@ -69,9 +67,42 @@ or
 
 [Japan Meteorological Agency seismic intensity scale](https://en.wikipedia.org/wiki/Japan_Meteorological_Agency_seismic_intensity_scale#Scale_overview)
 
-### Events: m5seismo/pga_trigger
 
-Displays or changes PGA trigger value. The first time SeismoM5 works after the first upload, the default PGA Trigger value will be 0.025 g. It can be changed with sending a float value to this topic in raw format, like sending a raw MQTT message 0.050 to m5seismo/pga_trigger topic to make the trigger value 0.05 g. If the PGA Trigger is ever changed, SeismoM5 saves this value permanently and use it from then on even after you reset SeismoM5. On screen top right corner shows the PGA Trigger value.
+### PGA Trigger: m5seismo/pga_trigger
+
+Displays PGA trigger value for the earthquake alert. The first time SeismoM5 works after the first upload, the default PGA Trigger value will be 0.025 g. On screen, top right corner shows the PGA Trigger value.
+
+
+### Commands: m5seismo/command
+
+Should be send in JSON format as follows: 
+```
+{
+    "pga_trigger": 0.0150,
+    "update": false,
+    "reset": false,
+    "speaker_enable" : true,
+    "lcd_brightness" : 7,
+    "continuous_graph" : false,
+    "update_period" : 30
+}
+```
+There is no need to send this full message, any item can be send standalone or together with any other item.
+
+**"pga_trigger" : *float***  - Changes the PGA Trigger. If the PGA Trigger is ever changed, SeismoM5 saves this value permanently and use it from then on even after you reset SeismoM5.
+
+**"reset" : *bool***  - If true, resets M5StickC for recalibration purposes.
+
+**"update" : *bool***  - If true, sends a one time event message update request.
+
+**"speaker_enable" : *bool***  - If true, enables the SPK HAT Speaker, false disables it.
+
+**"lcd_brightness" : *int***  - Sets the standby LCD brightness, should be between 7-15, 15 being the brightest.
+
+**"continuous_graph" : *bool***  - If true, draws the graph continuously, even when there is no earthquake.
+
+**"update period" : *int***  - Sets the update period of event mqtt message to be send, even there is no earthquake, in seconds.
+
 
 ## OTA Firmware Update
 
