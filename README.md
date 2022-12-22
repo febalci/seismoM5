@@ -57,7 +57,7 @@ Button B of M5stickC resets M5StickC for recalibration purposes.
 
 ### Events: m5seismo/event
 
-**{"x":"-85","y":"-1097","z":"16305","pga":"0.0007"}**   <sup>Sample</sup>
+**{"x":"-85","y":"-1097","z":"16305","pga":"0.07"}**   <sup>Sample</sup>
 
 Momentary x,y,z parameters and PGA in (g). Only send while an earthquake occurs.
 
