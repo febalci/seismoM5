@@ -141,8 +141,8 @@ mqtt:
   button:
     - unique_id: seismom5_reset_btn
       name: "Restart SeismoM5"
-      command_topic: "m5seismo/state"
-      payload_press: "RESET"
+      command_topic: "m5seismo/command"
+      payload_press: "{\"reset\": true }"
       availability:
         - topic: "m5seismo/status"
       qos: 0
@@ -165,4 +165,19 @@ and the earthquake warning automation for a pushover smart phone notification:
     data_template:
       message: >
         EARTHQUAKE HAPPENING !!!
+```
+
+offline warning automation for a pushover smart phone notification:
+
+```
+- alias: SeismoM5 Online Check
+  trigger:
+  - platform: state
+    entity_id: sensor.seismom5_state
+    to: "unavailable"
+  action:
+  - service: notify.pushover
+    data_template:
+      message: >
+        SeismoM5 Offline...
 ```
