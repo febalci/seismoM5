@@ -11,10 +11,7 @@
 #include <Preferences.h>
 #include <stdlib.h>
 #include "FreeFonts.h"
-
-Preferences preferences; // To store and read pga_trigger
-
-bool MQTT_active = true; // Enable / Disable MQTT
+#include <ArduinoJson.h>
 
 //WiFi Parameters
 const char* WIFI_SSID = "XXXXXXXX";
@@ -22,6 +19,8 @@ const char* WIFI_PASS = "XXXXXXXX";
 WebServer server(80); // OTA
 
 // MQTT Parameters
+bool MQTT_active = true; // Enable / Disable MQTT
+
 const char* MQTT_SERVER = "XXXXXXXX";
 const char* MQTT_PORT = "1883";
 const char* MQTT_USER = "XXXXXXXX";
@@ -33,20 +32,16 @@ const char* MQTT_PASS = "XXXXXXXX";
 #define MQTT_PUB_STATE  (MQTT_PUB_TOPIC_MAIN "/state")
 #define MQTT_PUB_AVAILABILITY (MQTT_PUB_TOPIC_MAIN "/status") // online or offline
 #define MQTT_PUB_PGA_TRIGGER (MQTT_PUB_TOPIC_MAIN "/pga_trigger") // change pga_trigger
-bool mqtt_disable_pga_publish;
+#define MQTT_PUB_COMMAND (MQTT_PUB_TOPIC_MAIN "/command")
 
-AsyncMqttClient mqttClient;
+// SPK HAT, default disabled
+bool SPK_HAT = false;
+const int SPK_pin   = 26;
+int spkChannel      = 0;
+int spkFreq         = 50;
+int spkResolution   = 10;
 
-// SPK HAT, uncomment out this line if SPK HAT is used
-// #define SPK_HAT   
-
-#ifdef SPK_HAT
-  const int SPK_pin   = 26;
-  int spkChannel      = 0;
-  int spkFreq         = 50;
-  int spkResolution   = 10;
-# endif
-
+// Screen coordinates
 int8_t lcd_brightness=7; // TFT backlight brightness for standby ( value: 7 - 15 )
 uint8_t graph_x_axis = 7; // X Coordinate for Vertical axis line
 uint8_t graph_x_start = 8; // X Coordinate for where the graph starts (increases)
@@ -81,23 +76,32 @@ int buffersize=1000;     //Amount of readings used to average, make it higher to
 int acel_deadzone=8;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
 
 // Seismic Measuring Variables
-float scale_factor = 1; // scale_factor 
+float scale_factor = 1; // scale_factor
+uint8_t eq_pet = 40; // Post Event Time (Around 5 secs)
+uint16_t flush_period = 30; //seconds
+
 bool eq_status = false;
 int eq_time_count;
-uint8_t eq_pet = 40; // Post Event Time (Around 5 secs)
 int16_t ax, ay, az;
-float xy_vector_mag, x_vector_mag, y_vector_mag, z_vector_mag; 
-float pga; // Peak Ground Acceleration
-// https://en.wikipedia.org/wiki/Peak_ground_acceleration
-// https://en.wikipedia.org/wiki/Japan_Meteorological_Agency_seismic_intensity_scale
+float xy_vector_mag, x_vector_mag, y_vector_mag, z_vector_mag;
+float pga;
+/* Peak Ground Acceleration
+https://en.wikipedia.org/wiki/Peak_ground_acceleration
+https://en.wikipedia.org/wiki/Japan_Meteorological_Agency_seismic_intensity_scale
+*/
 float pga_trigger; // (g - m/s2)
 uint16_t flush_event = 0;
+bool flush_update = true;
+
+AsyncMqttClient mqttClient;
+
+Preferences preferences; // To store and read pga_trigger
 
 MPU6886s seismo;
 
 /* Server Index Page */
  
-const char* serverIndex = 
+const char* serverIndex =
 "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
 "<title>SeismoM5</title>"
 "<h1>SeismoM5 OTA</h1>"
@@ -244,14 +248,12 @@ void draw_graph(float x_vector, float y_vector, float z_vector) {
 
 void eq_happening() {
   eq_status = true;
-  publish_event(String(ax),String(ay),String(az),String(pga));
+  publish_event(ax, ay, az, pga);
   eq_time_count = 0;
   M5.Axp.ScreenBreath(15); // Full Brightness
   publish_state("EARTHQUAKE");
   digitalWrite(M5_LED, LOW);
-#ifdef SPK_HAT
-  ledcWriteTone(spkChannel, 800);
-#endif
+  if (SPK_HAT) ledcWriteTone(spkChannel, 800);
 }
 
 void change_pga_trigger(float new_trigger) {
@@ -299,11 +301,9 @@ void setup() {
   pinMode(M5_LED, OUTPUT);
   digitalWrite(M5_LED, HIGH);
   
-#ifdef SPK_HAT
   ledcSetup(spkChannel, spkFreq, spkResolution);
   ledcAttachPin(SPK_pin, spkChannel);
   ledcWriteTone(spkChannel, 0);
-#endif
   
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
@@ -322,9 +322,8 @@ void setup() {
     Serial.print(".");
   }
 
-  mqtt_disable_pga_publish = false;
   publish_pga();
-  publish_event(16384, 0, 0, 0.00); // Init 1st retain event
+  publish_event(16384, 0, 0, 0.0000); // Init 1st retain event
   Serial.print("PGA TRIGGER:");
   Serial.println(String(pga_trigger,3).c_str());
   
@@ -362,7 +361,6 @@ void setup() {
 
   calibrate_MPU();
 
-  mqtt_disable_pga_publish = true;
   Serial.println("LISTENING...");
 }
 
@@ -380,10 +378,8 @@ void loop() {
     publish_event(ax, ay, az, pga);
 
     digitalWrite(M5_LED, HIGH);
-#ifdef SPK_HAT
-    ledcWriteTone(spkChannel, 0);
-#endif
-    M5.Axp.ScreenBreath(lcd_brightness); 
+    if (SPK_HAT) ledcWriteTone(spkChannel, 0);
+    M5.Axp.ScreenBreath(lcd_brightness);
     M5.Lcd.setTextSize(1);
     M5.Lcd.setTextColor(WHITE,BLACK);
   }
@@ -437,7 +433,7 @@ void loop() {
   M5.Lcd.print("(g)");
   M5.Lcd.fillRect(29,mqtt_print_y-7,mqtt_print_x-68,14,BLACK);
   M5.Lcd.setCursor(30, mqtt_print_y+5);
-  M5.Lcd.setFreeFont(FSSB9);  // Select Free Sans Serif Bold 9pt font  
+  M5.Lcd.setFreeFont(FSSB9);  // Select Free Sans Serif Bold 9pt font
   M5.Lcd.printf("%.4f", pga);
   M5.Lcd.setTextFont(1);
 
@@ -449,10 +445,12 @@ void loop() {
   if (eq_status) {
     publish_event(ax, ay, az, pga);
   } else {
-    flush_event++;
-    if (flush_event > 300) { // 30 Seconds
-      publish_event(ax, ay, az, pga);
-      flush_event = 0;
+      if (flush_update) {
+      flush_event++;
+      if (flush_event > (flush_period*10)) {
+        publish_event(ax, ay, az, pga);
+        flush_event = 0;
+      }
     }
   }
 
@@ -503,18 +501,61 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
       ESP.restart();
     } else if (String(payload) == "UPDATE") {
       Serial.print("MQTT Update Request Received");
-      publish_event(String(ax),String(ay),String(az),String(pga));
+      publish_event(ax, ay, az, pga);
       publish_state("LISTENING");
     }
-  } else if (String(topic) == MQTT_PUB_PGA_TRIGGER) {
-    if (mqtt_disable_pga_publish && (payload != NULL)) {
-      float pga_request = atof(payload);
-      if (pga_request != pga_trigger) {
-        Serial.print("MQTT Change PGA Trigger Request Received: ");
-        Serial.println(payload);
-        change_pga_trigger(pga_request);
+  } else if (String(topic) == MQTT_PUB_COMMAND) {
+    StaticJsonDocument<256> doc;
+    deserializeJson(doc, payload, len); 
+    serializeJsonPretty(doc, Serial);
+    Serial.println();
+    
+    if (doc["pga_trigger"] != nullptr) {
+      float pga_request = doc["pga_trigger"];
+      Serial.print("MQTT Change PGA Trigger Request Received: ");
+      Serial.println(pga_request);
+      change_pga_trigger(pga_request);
+    }
+
+    if (doc["reset"] != nullptr) {
+      if (doc["reset"]) {
+        Serial.print("MQTT Restart Request Received");
+        ESP.restart();
       }
     }
+
+    if (doc["update"] != nullptr) {
+      if (doc["update"]) {
+      Serial.print("MQTT Update Request Received");
+      publish_event(ax, ay, az, pga);
+      }
+    }
+
+    if (doc["speaker_enable"] != nullptr) {
+      SPK_HAT = doc["speaker_enable"];
+      Serial.print("MQTT Speaker Request Enabled: ");
+      Serial.println(SPK_HAT);
+    }
+
+    if (doc["lcd_brightness"] != nullptr) {
+      lcd_brightness = doc["lcd_brightness"];
+      Serial.print("MQTT LCD Standby Brightness: ");
+      Serial.println(lcd_brightness);
+    }
+
+    if (doc["continuous_graph"] != nullptr) {
+      continuous_graph = doc["continuous_graph"];
+      Serial.print("MQTT Continuous Graph Enabled: ");
+      Serial.println(continuous_graph);
+    }
+    
+    if (doc["update_period"] != nullptr) {
+      flush_period = doc["update_period"];
+      Serial.print("MQTT Update Period: ");
+      Serial.print(flush_period);
+      Serial.println(" secs.");
+    }
+
   }
 }
 
