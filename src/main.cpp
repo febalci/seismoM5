@@ -582,7 +582,7 @@ void onMqttConnect(bool sessionPresent) {
   publish_available();
   Serial.println(sessionPresent);
   uint16_t packetIdSub = mqttClient.subscribe(MQTT_PUB_STATE, 0);
-  uint16_t packetIdSub2 = mqttClient.subscribe(MQTT_PUB_PGA_TRIGGER, 0);
+  uint16_t packetIdSub2 = mqttClient.subscribe(MQTT_PUB_COMMAND, 0);
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
