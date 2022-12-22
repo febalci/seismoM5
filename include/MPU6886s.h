@@ -11,8 +11,6 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include "MahonyAHRS.h"
-
 #define MPU6886_ADDRESS            0x68
 #define MPU6886_WHOAMI             0x75
 #define MPU6886_ACCEL_INTEL_CTRL   0x69
@@ -101,8 +99,6 @@ class MPU6886s {
     void setXGyroOffset(int16_t offset);
     void setYGyroOffset(int16_t offset);
     void setZGyroOffset(int16_t offset);
-
-    void getAhrsData(float* pitch, float* roll, float* yaw);
 
     void SetINTPinActiveLogic(uint8_t level);
     void DisableAllIRQ();
