@@ -500,16 +500,7 @@ void onMqttPublish(uint16_t packetId) {
 }
 
 void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-  if (String(topic) == MQTT_PUB_STATE) {
-    if (String(payload) == "RESET") {
-      Serial.print("MQTT Restart Request Received");
-      ESP.restart();
-    } else if (String(payload) == "UPDATE") {
-      Serial.print("MQTT Update Request Received");
-      publish_event(ax, ay, az, pga);
-      publish_state("LISTENING");
-    }
-  } else if (String(topic) == MQTT_PUB_COMMAND) {
+  if (String(topic) == MQTT_PUB_COMMAND) {
     StaticJsonDocument<256> doc;
     deserializeJson(doc, payload, len); 
     serializeJsonPretty(doc, Serial);
@@ -573,7 +564,6 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
       Serial.print(flush_period);
       Serial.println(" secs.");
     }
-
   }
 }
 
