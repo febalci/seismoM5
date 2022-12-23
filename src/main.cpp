@@ -92,6 +92,7 @@ https://en.wikipedia.org/wiki/Japan_Meteorological_Agency_seismic_intensity_scal
 float pga_trigger; // (g - m/s2)
 uint16_t flush_event = 0;
 bool flush_update = true;
+float pga_request;
 
 AsyncMqttClient mqttClient;
 
@@ -265,6 +266,7 @@ void change_pga_trigger(float new_trigger) {
   M5.Lcd.print("     ");
   publish_state("CHANGED_PGA_TRIGGER");
   publish_state("LISTENING");
+  publish_pga();
 }
 
 void onWifiEvent(WiFiEvent_t event) {
@@ -507,7 +509,7 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
     Serial.println();
     
     if (doc["pga_trigger"] != nullptr) {
-      float pga_request = doc["pga_trigger"];
+      pga_request = doc["pga_trigger"];
       Serial.print("MQTT Change PGA Trigger Request Received: ");
       Serial.println(pga_request);
       change_pga_trigger(pga_request);
