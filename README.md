@@ -104,9 +104,18 @@ There is no need to send this full message, any item can be send standalone or t
 **"update period" : *int***  - Sets the update period of event mqtt message to be send, even there is no earthquake, in seconds.
 
 
-## OTA Firmware Update
+## SeismoM5 Web Page
 
-You can connect the IP Address of SeismoM5 for an OTA Firmware Update.
+You can connect to SeismoM5 with its IP address to monitor or change:
+
+- WebSerial Output
+
+- OTA Firmware Update
+
+- Change PGA Trigger Value
+
+- Restart SeismoM5 for Calibration or any other purpose
+
 
 ## Mounting
 
