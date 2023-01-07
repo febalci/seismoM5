@@ -1,11 +1,5 @@
-#ifdef STICKC
-  #include <M5StickC.h>
-#else
-  #include <M5StickCPlus.h>
-#endif
-
-// Logging
-uint8_t logging = 3; // 0: None, 1: Serial only, 2: WebSerial only, 3: Serial and WebSerial
+#ifndef _config_H_
+#define _config_H_
 
 //WiFi Parameters
 #define WIFI_SSID "XXXXXXXX"
@@ -15,7 +9,7 @@ uint8_t logging = 3; // 0: None, 1: Serial only, 2: WebSerial only, 3: Serial an
 bool MQTT_active = true; // Enable / Disable MQTT for initial start only
 
 #define MQTT_SERVER "XXXXXXXX"
-#define MQTT_PORT "1883"
+#define MQTT_PORT 1883
 #define MQTT_USER "XXXXXXXX"
 #define MQTT_PASS "XXXXXXXX"
 
@@ -28,40 +22,37 @@ bool MQTT_active = true; // Enable / Disable MQTT for initial start only
 #define MQTT_PUB_COMMAND (MQTT_PUB_TOPIC_MAIN "/command")
 
 // SPK HAT, default disabled
-bool SPK_HAT;
 #define SPK_pin 26
 #define spkChannel 0
 #define spkFreq 50
 #define spkResolution 10
 
 // Screen coordinates
-int8_t lcd_brightness; // TFT backlight brightness for standby ( value: 7 - 15 )
-uint8_t graph_x_axis = 7; // X Coordinate for Vertical axis line
+#define graph_x_axis 7 // X Coordinate for Vertical axis line
 uint8_t graph_x_start = 8; // X Coordinate for where the graph starts (increases)
-bool continuous_graph; // false: Draw graph only when EQ happens
 uint8_t previous_graph_y[3];
 #ifdef STICKC
   // Graph coordinates for main screen: M5StickC: 160x80
   uint8_t graph_y_axis[3] = {25,35,45}; // Y coordinates for X,Y,Z horizontal axis lines
-  uint8_t graph_y_axis_boundary = 5; // pixels
-  uint8_t graph_x_limit = 155; // X Coordinate limit for graph
-  uint8_t graph_scale = 50;
-  uint8_t graph_clear_y_height = 37;
-  uint8_t pga_print_x = 120;
-  uint8_t pga_print_y = 0;
-  uint8_t mqtt_print_x = 130; // 120 for text size 1
-  uint8_t mqtt_print_y = 70;
+  #define graph_y_axis_boundary 5 // pixels
+  #define graph_x_limit 155 // X Coordinate limit for graph
+  #define graph_scale 50
+  #define graph_clear_y_height 37
+  #define pga_print_x 120
+  #define pga_print_y 0
+  #define mqtt_print_x 130 // 120 for text size 1
+  #define mqtt_print_y 70
 #else
   // Graph coordinates for main screen: M5StickCPlus: 240x135 pixels
   uint8_t graph_y_axis[3] = {35,65,95}; // Y coordinates for X,Y,Z horizontal axis lines
-  uint8_t graph_y_axis_boundary = 15; // pixels
-  uint8_t graph_x_limit = 235; // X Coordinate limit for graph
-  uint8_t graph_scale = 150;
-  uint8_t graph_clear_y_height = 97;
-  uint8_t pga_print_x = 200;
-  uint8_t pga_print_y = 2;
-  uint8_t mqtt_print_x = 200;
-  uint8_t mqtt_print_y = 125;
+  #define graph_y_axis_boundary 15 // pixels
+  #define graph_x_limit 235 // X Coordinate limit for graph
+  #define graph_scale 150
+  #define graph_clear_y_height 97
+  #define pga_print_x 200
+  #define pga_print_y 2
+  #define mqtt_print_x 200
+  #define mqtt_print_y 125
 #endif
 
 // MPU6886 Calibration Parameters
@@ -126,152 +117,192 @@ form{background:#fff;max-width:258px;margin:75px auto;padding:30px;border-radius
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML>
 <html>
-<head>
-	<title>SeismoM5 Web Server Configuration</title>
-	<meta charset='utf-8'>
-	<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-	<link rel="icon" href="data:,">
-	<style>		html {
-			  font-family: verdana;
-		  text-align: center;
-		}
-		h1 {
-		  font-size: 1.8rem;
-		  color: white;
-		}
-		h2{
-		  font-size: 1.2rem;
-		  color: white;
-		}
-		.topnav {
-		  overflow: hidden;
-		  background-color: #1fa3ec;
-		  text-align: center;
-		}
-		div,
-		fieldset,
-		input,
-		select {
-			  padding: 5px;
-			  font-size: 1em;
-		}
-		
-		input {
-			  box-sizing: border-box;
-			  -webkit-box-sizing: border-box;
-			  -moz-box-sizing: border-box;
-		}
-				
-		textarea {
-			  resize: none;
-			  height: 318px;
-			  padding: 5px;
-			  overflow: auto;
-		}
-		
-		body {
-			  text-align: center;
-			  font-family: verdana;
-		}
-		
-		td {
-			  padding: 0px;
-		}
-		
-		button {
-			  border: 0;
-			  border-radius: 0.3rem;
-			background-color: #1fa3ec;
-			color: #fff;
-			line-height: 2.4rem;
-			font-size: 1.2rem;
-			-webkit-transition-duration: 0.4s;
-			transition-duration: 0.4s;
-			cursor: pointer;
-		}
-		button:hover {
-			background-color: #0e70a4;
-		}
-    .button-container-div {
-            text-align: center;
-    }
-		.bred {
-			background-color: #d43535;
-		}
-		
-		.bred:hover {
-			background-color: #931f1f;
-		}
-		
-		.bgrn {
-			  background-color: #47c266;
-		}
-		
-		.bgrn:hover {
-			  background-color: #5aaf6f;
-		}
-		
-		a {
-			  text-decoration: none;
-		}
-		
-		.p {
-			  float: left;
-			  text-align: left;
-		}
-		
-		.q {
-			  float: right;
-			  text-align: right;
-		}
-    .form-control {
-        display: inline-block;
-    }
+  <head>
+    <title>SeismoM5 Web Server Configuration</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+    <link rel="icon" href="data:,">
+    <style>
+      html {
+        font-family: verdana;
+        text-align: center;
+      }
 
-    .btn {
-       display: inline-block;
-    }
-	</style>
-</head>
-<body onload="clearInp()">
-<div class="topnav">
-	<h1>
-		SeismoM5 Web Server
-		</h3>
-		<h2>
-			Configuration
-		</h2>
-</div>
-	<br/>
-    <div class="button-container-div">
-      <button onclick="window.location.href='/webserial';">
-        Web Serial</button>
+      h1 {
+        font-size: 1.8rem;
+        color: white;
+      }
+
+      h2 {
+        font-size: 1.2rem;
+        color: white;
+      }
+
+      .topnav {
+        overflow: hidden;
+        background-color: #1fa3ec;
+        text-align: center;
+      }
+
+      div,
+      fieldset,
+      input,
+      select {
+        padding: 5px;
+        font-size: 1em;
+      }
+
+      input {
+        box-sizing: border-box;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+      }
+
+      textarea {
+        resize: none;
+        height: 318px;
+        padding: 5px;
+        overflow: auto;
+      }
+
+      body {
+        text-align: center;
+        font-family: verdana;
+      }
+
+      td {
+        padding: 0px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 0.3rem;
+        background-color: #1fa3ec;
+        color: #fff;
+        line-height: 2.4rem;
+        font-size: 1.2rem;
+        -webkit-transition-duration: 0.4s;
+        transition-duration: 0.4s;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #0e70a4;
+      }
+
+      .button-container-div {
+        text-align: center;
+      }
+
+      .bred {
+        background-color: #d43535;
+      }
+
+      .bred:hover {
+        background-color: #931f1f;
+      }
+
+      .bgrn {
+        background-color: #47c266;
+      }
+
+      .bgrn:hover {
+        background-color: #5aaf6f;
+      }
+
+      a {
+        text-decoration: none;
+      }
+
+      .p {
+        float: left;
+        text-align: left;
+      }
+
+      .q {
+        float: right;
+        text-align: right;
+      }
+
+      .form-control {
+        display: inline-block;
+      }
+
+      .btn {
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body onload="clearInp()">
+    <div class="topnav">
+      <h1> SeismoM5 Web Server </h3>
+        <h2> Configuration </h2>
     </div>
-	<br/>
-    <div class="button-container-div">
-      <button onclick="window.location.href='/update';">
-        OTA Firmware Update</button>
+    <div style='text-align:left;display:inline-block;min-width:340px;'>
+      <fieldset>
+        <form method='get' action='sv' autocomplete="off">
+          <fieldset>
+            <legend>
+              <b>&nbsp;MQTT parameters&nbsp;</b>
+            </legend>
+            <label for="new_pga">PGA Trigger (g)</label><br>
+            <input id="new_pga" name="new_pga" maxlength="6" value=%PGAPLACEHOLDER%>
+            <br />
+            <br />
+            <label for="new_bri">LCD Standby Brightness (7-15)</label><br>
+            <input id="new_bri" name="new_bri" maxlength="2" value=%BRIPLACEHOLDER%>
+            <br />
+            <br />
+            <label for="new_per">Update Period (sec)</label><br>
+            <input id="new_per" name="new_per" maxlength="4" value=%PERPLACEHOLDER%>
+            <br />
+          </fieldset>
+          <fieldset>
+            <legend>
+              <b>&nbsp;Other parameters&nbsp;</b>
+            </legend>
+            <input type="checkbox" id='spk' name='spk'> <label for="spk">Speaker Enable</label><br>
+            <br />
+            <input type="checkbox" id='con' name='con'> <label for="con">Continuous Graph</label><br>
+            <br />
+            <label for="lg">Logging:</label> <select id='lg' name='lg'>
+              <option value='0'>None</option>
+              <option value='1'>Serial Only</option>
+              <option value='2'>WebSerial Only</option>
+              <option value='3'>Both</option>
+            </select>
+          </fieldset>
+          <div class="button-container-div">
+            <button type='submit' class='button bgrn'>Save</button>
+          </div>
+        </form>
+      </fieldset>
+      <br />
+      <div class="button-container-div">
+        <button onclick="window.location.href='/webserial';"> Web Serial</button>
+      </div>
+      <br />
+      <div class="button-container-div">
+        <button onclick="window.location.href='/update';"> OTA Firmware Update</button>
+      </div>
+      <br />
+      <br />
+      <form action='rt' method='get' onsubmit='return confirm("Confirm Reset M5");'>
+        <div class="button-container-div">
+          <button class='button bred'>Reset M5 for Recalibration</button>
+        </div>
+      </form>
+      <br />
+      <br />
     </div>
-	<br/>
-  <form action="/cp">
-    <label for="fname">PGA Trigger:</label>
-    <input type="text" id="new_pga" name="new_pga" maxlength="6" size="2" placeholder=%PGAPLACEHOLDER%> <button>Change PGA</button>
-	</form>
-	<br/>
-	<br/>
-	<form action='rt' method='get' onsubmit='return confirm("Confirm Reset M5");'>
-    <div class="button-container-div">
-		  <button class='button bred'>Reset M5  for Recalibration</button>
-    </div>
-	</form>
-	<br/>
-	<br/>
-</div>
-<script>
-  function clearInp() {
-    document.getElementById("new_pga").value = "";
-  }
-</script>
-</body>
+    <script>
+      document.getElementById('lg').value = %LOGPLACEHOLDER%;
+	  document.getElementById('spk').checked = %SPKPLACEHOLDER%;
+	  document.getElementById('con').checked = %CONPLACEHOLDER%;
+    </script>
+  </body>
 </html>
 )rawliteral";
+
+#endif
+
