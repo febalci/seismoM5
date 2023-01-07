@@ -9,7 +9,7 @@ SeismoM5 is an Earthquake Sensor Implementation on M5StickC, using its own MPU68
 - Emergency alerts; Red Led and SPK HAT sound warning during an earthquake.
 
 <p align="center">
-<img src="pics/IMG_4012.jpg" width="382" height="200">
+<img src="pics/IMG_4267a.jpg" width="382" height="200">
 </p>
   
 ## Seismology
