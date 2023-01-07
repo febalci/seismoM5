@@ -224,7 +224,7 @@ void MPU6886s::calibration(){
     setYAccelOffset(ay_offset);
     setZAccelOffset(az_offset);
     meansensors();
-    Serial.println("...");
+    Serial.print(".");
 
     if (abs(16384-mean_ax)<=acel_deadzone) ready++;
     else ax_offset=ax_offset+(16384-mean_ax)/acel_deadzone;
@@ -235,7 +235,7 @@ void MPU6886s::calibration(){
     if (abs(mean_az)<=acel_deadzone) ready++;
     else az_offset=az_offset-mean_az/acel_deadzone;
  
-    Serial.println(ready);
+//    Serial.println(ready);
 
     if (ready==3) break;
   }

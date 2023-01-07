@@ -9,7 +9,7 @@ SeismoM5 is an Earthquake Sensor Implementation on M5StickC, using its own MPU68
 - Emergency alerts; Red Led and SPK HAT sound warning during an earthquake.
 
 <p align="center">
-<img src="pics/IMG_4012.jpg" width="382" height="200">
+<img src="pics/IMG_4267a.jpg" width="382" height="200">
 </p>
   
 ## Seismology
@@ -51,6 +51,8 @@ Button B of M5stickC resets M5StickC for recalibration purposes.
 **CALIBRATION:** MPU6886 Accelerator find offsets and send to MPU registers for calibration. Might take up to 1 minute.
 
 **LISTENING:** Everything is ready and listening for earthquakes.
+
+**EARTHQUAKE:** Earthquake is happening
 
 
 ### Events: m5seismo/event
@@ -104,9 +106,32 @@ There is no need to send this full message, any item can be send standalone or t
 **"update period" : *int***  - Sets the update period of event mqtt message to be send, even there is no earthquake, in seconds.
 
 
-## OTA Firmware Update
+## SeismoM5 Web Page
 
-You can connect the IP Address of SeismoM5 for an OTA Firmware Update.
+<p align="center">
+<img src="pics/Screen Shot 2023-01-07 at 13.43.37.png" width="245" height="371">
+</p>
+
+You can connect to SeismoM5 with its IP address to monitor or change:
+
+- WebSerial Output
+
+- OTA Firmware Update
+
+- Change PGA Trigger Value
+
+- Enable/Disable Speaker
+
+- Change standby LCD Brightness
+
+- Enable/Disable continuous graph
+
+- Change the update period of event mqtt message to be send, even there is no earthquake, in seconds
+
+- Restart SeismoM5 for Calibration or any other purpose
+
+- Change Logging Type (Serial, WebSerial, Both or None)
+
 
 ## Mounting
 
