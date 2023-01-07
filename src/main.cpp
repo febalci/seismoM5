@@ -4,69 +4,28 @@
   #include <M5StickCPlus.h>
 #endif
 #include <WiFi.h>
-#include <AsyncMqttClient.h>
 #include <WebServer.h>
 #include <Update.h>
-#include <Preferences.h>
 #include <stdlib.h>
-#include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
-#include <WebSerial.h>
 #include "FreeFonts.h"
 #include "MPU6886s.h"
 #include "config.h"
+#include "util.h"
+#include "mqtt.h"
 
 // WiFi
 AsyncWebServer server(80); // OTA
 size_t content_len;
-bool webSerialEnabled = false;
 
-// Seismic Measuring Variables
-uint16_t flush_period; //seconds
-
-bool eq_status = false;
-int eq_time_count;
-int16_t ax, ay, az;
-float xy_vector_mag, x_vector_mag, y_vector_mag, z_vector_mag;
-float pga;
-/* Peak Ground Acceleration
-https://en.wikipedia.org/wiki/Peak_ground_acceleration
-https://en.wikipedia.org/wiki/Japan_Meteorological_Agency_seismic_intensity_scale
-*/
-float pga_trigger; // (g - m/s2)
-uint16_t flush_event = 0;
-bool flush_update = true;
-float pga_request;
-
-AsyncMqttClient mqttClient;
-TimerHandle_t mqttReconnectTimer;
 TimerHandle_t wifiReconnectTimer;
-
-Preferences preferences; // To store and read pga_trigger
 
 MPU6886s seismo;
 
-void connectToWifi();
-void connectToMqtt();
-void publish_available();
-void publish_state(String state);
-void publish_event(int16_t x_mag, int16_t y_mag, int16_t z_mag, float pga_mag);
-void publish_pga();
-void onMqttPublish(uint16_t packetId);
-void onMqttConnect(bool sessionPresent);
-void onMqttDisconnect(AsyncMqttClientDisconnectReason reason);
-void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total);
-
-template<typename T>
-void logln(T msg) {
-  if (logging == 1 || logging == 3) Serial.println(msg);
-  if ((logging == 2 || logging == 3) && webSerialEnabled) WebSerial.println(msg);
-}
-
-template<typename T>
-void log(T msg) {
-  if (logging == 1 || logging == 3) Serial.print(msg);
-  if ((logging == 2 || logging == 3) && webSerialEnabled) WebSerial.print(msg);
+void updateState(const char* state) {
+  log("State: ");
+  logln(state);
+  publish_mqtt(MQTT_PUB_STATE, state, 1, true);
 }
 
 void handleUpdate(AsyncWebServerRequest *request) {
@@ -109,32 +68,34 @@ void handleDoUpdate(AsyncWebServerRequest *request, const String& filename, size
   }
 }
 
-/*
-void printProgress(size_t prg, size_t sz) {
-  logf("Progress: %d%%\n", (prg*100)/content_len);
-}
-*/
 String config_processor(const String& var){
-  if(var == "PGAPLACEHOLDER"){
-    String server_details = "";
+  String server_details = "";
+  if (var == "PGAPLACEHOLDER"){
     server_details = String(pga_trigger,4);
-    return server_details;
+  } else if (var == "BRIPLACEHOLDER"){
+    server_details = String(lcd_brightness);
+  } else if (var == "PERPLACEHOLDER"){
+    server_details = String(flush_period);
+  } else if (var == "SPKPLACEHOLDER"){
+    server_details = SPK_HAT;
+  } else if (var == "CONPLACEHOLDER"){
+    server_details = continuous_graph;
+  } else if (var == "LOGPLACEHOLDER"){
+    server_details = logging;
   }
-  return String();
+  return server_details;
 }
 
 void calibrate_MPU() {
-  logln("Init MPU6886...");
-  publish_state("INIT_MPU");
+  updateState("INIT_MPU");
   seismo.Init();
+  updateState("WAIT");
 
-  publish_state("WAIT");
   M5.Lcd.setRotation(1);
   M5.Lcd.fillScreen(BLACK);
   M5.Lcd.setTextColor(WHITE,BLACK);
   M5.Lcd.setTextSize(2);
 
-  logln("Prepare for Calibration...");
 #ifdef STICKC
   M5.Lcd.setCursor(2, 5);
   M5.Lcd.print("PREPARE FOR");
@@ -157,10 +118,6 @@ void calibrate_MPU() {
   }
 #endif // 160x80-240x135
 
-//  Serial.println("Setting MPU6886 Range +/- 2g");
-//  seismo.SetAccelFsr(seismo.AFS_2G);
-
-  logln("Calibrating...");
   M5.Lcd.fillScreen(BLACK);
 #ifdef STICKC
   M5.Lcd.setTextSize(1);
@@ -173,13 +130,13 @@ void calibrate_MPU() {
   M5.Lcd.setTextColor(RED,BLACK);
   M5.Lcd.setCursor(12, 35);
   M5.Lcd.print("DO NOT MOVE!");
-  publish_state("CALIBRATION");
+  updateState("CALIBRATION");
 
   seismo.calibrateAccel(buffersize,acel_deadzone);
 
   M5.Axp.ScreenBreath(lcd_brightness);
   M5.Lcd.fillScreen(BLACK);
-  publish_state("LISTENING");
+  updateState("LISTENING");
 }
 
 void draw_graph(float x_vector, float y_vector, float z_vector) {
@@ -211,25 +168,19 @@ void draw_graph(float x_vector, float y_vector, float z_vector) {
 
 void eq_happening() {
   eq_status = true;
-  publish_event(ax, ay, az, pga);
+  String msg = "{\"x\":\""+ String(ax) + "\",\"y\":\"" + String(ay) + "\",\"z\":\"" + String(az) + "\",\"pga\":\""+ String(pga,4).c_str() +"\"}";
+  publish_mqtt(MQTT_PUB_EVENT, msg.c_str(), 0, true);
+
   eq_time_count = 0;
   M5.Axp.ScreenBreath(15); // Full Brightness
-  publish_state("EARTHQUAKE");
-  logln("EARTHQUAKE");
+  updateState("EARTHQUAKE");
   digitalWrite(M5_LED, LOW);
   if (SPK_HAT) ledcWriteTone(spkChannel, 800);
 }
 
-void change_pga_trigger(float new_trigger) {
-  preferences.begin("seismom5", false);
-  preferences.putFloat("pga_trigger", new_trigger);
-  preferences.end();
-  pga_trigger = new_trigger;
-  M5.Lcd.setCursor(pga_print_x,pga_print_y);
-  M5.Lcd.print("     ");
-  publish_state("CHANGED_PGA_TRIGGER");
-  publish_state("LISTENING");
-  publish_pga();
+void connectToWifi() {
+  logln("Connecting to Wi-Fi...");
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
 }
 
 void onWifiEvent(WiFiEvent_t event) {
@@ -247,7 +198,7 @@ void onWifiEvent(WiFiEvent_t event) {
       break;
     case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
       logln("WiFi Disconnected. Restarting...");
-      xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
+      stopMqttTimer();
       xTimerStart(wifiReconnectTimer, 0);
 //      delay(3000);
 //      WiFi.setAutoReconnect(true);
@@ -262,30 +213,17 @@ void setup() {
   Serial.begin(115200);   // Initialize serial communication
   M5.begin();
 
-  preferences.begin("seismom5", false);
-  pga_trigger = preferences.getFloat("pga_trigger", 0.025);
-  SPK_HAT = preferences.getBool("spk_hat", false);
-  lcd_brightness = preferences.getUInt("brightness", 7);
-  continuous_graph = preferences.getBool("continuous", false);
-  flush_period = preferences.getUShort("period", 60);
-  preferences.end();
+  pref_init(); // Read Parameters
 
-  pinMode(M5_LED, OUTPUT);
+  pinMode(M5_LED, OUTPUT); // Setup M5 Red LED
   digitalWrite(M5_LED, HIGH);
-  
-  ledcSetup(spkChannel, spkFreq, spkResolution);
+    
+  ledcSetup(spkChannel, spkFreq, spkResolution); // Setup SPK_HAT
   ledcAttachPin(SPK_pin, spkChannel);
   ledcWriteTone(spkChannel, 0);
   
-  mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
   wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
-  mqttClient.onConnect(onMqttConnect);
-  mqttClient.onDisconnect(onMqttDisconnect);
-  mqttClient.onPublish(onMqttPublish);
-  mqttClient.onMessage(onMqttMessage);
-  mqttClient.setWill(MQTT_PUB_AVAILABILITY, 1, true, "offline");
-  mqttClient.setServer(MQTT_SERVER, atoi(MQTT_PORT));
-  mqttClient.setCredentials(MQTT_USER, MQTT_PASS);
+  initMqtt(); //Initialize MQTT Server Parameters
 
   WiFi.mode(WIFI_STA);
   WiFi.onEvent(onWifiEvent);
@@ -294,13 +232,17 @@ void setup() {
     delay(500);
     log(".");
   }
+
   WebSerial.begin(&server);
   webSerialEnabled = true;
 
-  publish_pga();
-  publish_event(16384, 0, 0, 0.0000); // Init 1st retain event
+  publish_mqtt(MQTT_PUB_PGA_TRIGGER, String(pga_trigger,3).c_str(), 1, true);
+  String msg = "{\"x\":\"16384\",\"y\":\"0\",\"z\":\"0\",\"pga\":\"0.0000\"}"; // Init 1st retain event
+  publish_mqtt(MQTT_PUB_EVENT, msg.c_str(), 0, true);
+
   log("PGA TRIGGER:");
   logln(String(pga_trigger,3).c_str());
+  pga_trigger_changed = pga_trigger;
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {request->send_P(200, "text/html", index_html,config_processor);});
   server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request){handleUpdate(request);});
@@ -310,23 +252,37 @@ void setup() {
                   size_t len, bool final) {handleDoUpdate(request, filename, index, data, len, final);}
   );
   server.on("/rt", HTTP_GET, [](AsyncWebServerRequest *request){handleReset(request);});
-  server.on("/cp", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (request->hasParam("new_pga")) {
-      if (request->getParam("new_pga")->value() != "") {
-        change_pga_trigger(request->getParam("new_pga")->value().toFloat());
-        request->send(200, "text/html", "PGA Trigger Changed");
-      }
+  server.on("/sv", HTTP_GET, [](AsyncWebServerRequest *request){
+    if (request->getParam("new_pga")->value() != "") {
+      pga_trigger_changed = request->getParam("new_pga")->value().toFloat();
     }
+    if (request->getParam("new_bri")->value() != "") {
+      lcd_brightness = request->getParam("new_bri")->value().toInt();
+      M5.Axp.ScreenBreath(lcd_brightness);
+    }
+    if (request->getParam("new_per")->value() != "") {
+      flush_period = request->getParam("new_per")->value().toInt();
+    }
+    if (request->hasParam("spk")) {
+      if (request->getParam("spk")->value() == "on") SPK_HAT = true; else SPK_HAT = false;
+    } else SPK_HAT = false;
+    if (request->hasParam("con")) {
+      if (request->getParam("con")->value() == "on") continuous_graph = true; else continuous_graph = false;
+    } else continuous_graph = false;
+    if (request->getParam("lg")->value() != "") {
+      logging = (request->getParam("lg")->value().toInt());
+    }
+    pref_update();
+    request->send(200, "text/html", "Settings Changed");
     request->redirect("/");
   });
   server.onNotFound([](AsyncWebServerRequest *request){request->send(404);});
 
   server.begin();
-//  Update.onProgress(printProgress);
 
   calibrate_MPU();
 
-  logln("LISTENING...");
+  updateState("LISTENING");
 }
 
 void loop() {
@@ -338,8 +294,10 @@ void loop() {
     eq_status = false;
     eq_time_count = 0;
 
-    publish_state("LISTENING");
-    publish_event(ax, ay, az, pga);
+    updateState("LISTENING");
+
+    String msg = "{\"x\":\""+ String(ax) + "\",\"y\":\"" + String(ay) + "\",\"z\":\"" + String(az) + "\",\"pga\":\""+ String(pga,4).c_str() +"\"}";
+    publish_mqtt(MQTT_PUB_EVENT, msg.c_str(), 0, true);
 
     digitalWrite(M5_LED, HIGH);
     if (SPK_HAT) ledcWriteTone(spkChannel, 0);
@@ -353,8 +311,16 @@ void loop() {
   M5.Lcd.setCursor(2, pga_print_y);
   M5.Lcd.print("EARTHQUAKE SENSOR");
   M5.Lcd.setTextColor(WHITE,BLACK);
+  if (pga_trigger_changed != pga_trigger) {
+    pga_trigger = pga_trigger_changed;
+    M5.Lcd.setCursor(pga_print_x,pga_print_y);
+    M5.Lcd.print("     ");
+    updateState("CHANGED_PGA_TRIGGER");
+    publish_mqtt(MQTT_PUB_PGA_TRIGGER, String(pga_trigger,3).c_str(), 1, true);
+    updateState("LISTENING");
+  }
   M5.Lcd.setCursor(pga_print_x,pga_print_y);
-  M5.Lcd.printf("%.3f", pga_trigger);
+  M5.Lcd.printf("%.4f", pga_trigger);
 
   if (mqttClient.connected()) {
     M5.Lcd.setTextColor(YELLOW,PURPLE);
@@ -398,12 +364,14 @@ void loop() {
   }
 
   if (eq_status) {
-    publish_event(ax, ay, az, pga);
+    String msg = "{\"x\":\""+ String(ax) + "\",\"y\":\"" + String(ay) + "\",\"z\":\"" + String(az) + "\",\"pga\":\""+ String(pga,4).c_str() +"\"}";
+    publish_mqtt(MQTT_PUB_EVENT, msg.c_str(), 0, true);
   } else {
       if (flush_update) {
       flush_event++;
       if (flush_event > (flush_period*10)) {
-        publish_event(ax, ay, az, pga);
+        String msg = "{\"x\":\""+ String(ax) + "\",\"y\":\"" + String(ay) + "\",\"z\":\"" + String(az) + "\",\"pga\":\""+ String(pga,4).c_str() +"\"}";
+        publish_mqtt(MQTT_PUB_EVENT, msg.c_str(), 0, true);
         flush_event = 0;
       }
     }
@@ -411,16 +379,20 @@ void loop() {
 
   if (M5.BtnA.wasPressed()) {
     if (mqttClient.connected()) {
-      publish_state("MQTT_BUTTON_DISCONNECT");
+      updateState("MQTT_BUTTON_DISCONNECT");
       MQTT_active = false;
-      xTimerStop(mqttReconnectTimer, 0);
+      stopMqttTimer();
       mqttClient.disconnect();
     } else {
 //      connectToMqtt();
       MQTT_active = true;
       connectToMqtt();
-      publish_state("MQTT_BUTTON_CONNECT");
-      publish_state("LISTENING");
+      delay(500);
+      updateState("MQTT_BUTTON_CONNECT");
+      publish_mqtt(MQTT_PUB_PGA_TRIGGER, String(pga_trigger,3).c_str(), 1, true);
+      String msg = "{\"x\":\"16384\",\"y\":\"0\",\"z\":\"0\",\"pga\":\"0.0000\"}"; // Init 1st retain event
+      publish_mqtt(MQTT_PUB_EVENT, msg.c_str(), 0, true);
+      updateState("LISTENING");
     }
   }
 
@@ -433,114 +405,3 @@ void loop() {
   delay(100);
 }
 
-void connectToWifi() {
-  logln("Connecting to Wi-Fi...");
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-}
-
-void connectToMqtt() {
-  logln("Connecting to MQTT...");
-  mqttClient.connect();
-}
-
-void publish_available() {
-  uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_AVAILABILITY, 1, true, String("online").c_str());
-}
-
-void publish_state(String state) {
-  uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_STATE, 1, true, state.c_str());
-}
-
-void publish_event(int16_t x_mag, int16_t y_mag, int16_t z_mag, float pga_mag) {
-  String msg = "{\"x\":\""+ String(x_mag) + "\",\"y\":\"" + String(y_mag) + "\",\"z\":\"" + String(z_mag) + "\",\"pga\":\""+ String(pga_mag,4).c_str() +"\"}";
-  uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_EVENT, 0, true, msg.c_str());
-}
-
-void publish_pga() {
-  uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_PGA_TRIGGER, 1, true, String(pga_trigger,3).c_str());
-}
-
-void onMqttPublish(uint16_t packetId) {
-
-}
-
-void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-  if (String(topic) == MQTT_PUB_COMMAND) {
-    StaticJsonDocument<256> doc;
-    deserializeJson(doc, payload, len); 
-    serializeJsonPretty(doc, Serial);
-    
-    if (doc["pga_trigger"] != nullptr) {
-      pga_request = doc["pga_trigger"];
-      log("MQTT Change PGA Trigger Request Received: ");
-      logln(pga_request);
-      change_pga_trigger(pga_request);
-    }
-
-    if (doc["reset"] != nullptr) {
-      if (doc["reset"]) {
-        logln("MQTT Restart Request Received");
-        ESP.restart();
-      }
-    }
-
-    if (doc["update"] != nullptr) {
-      if (doc["update"]) {
-      logln("MQTT Update Request Received");
-      publish_event(ax, ay, az, pga);
-      }
-    }
-
-    if (doc["speaker_enable"] != nullptr) {
-      SPK_HAT = doc["speaker_enable"];
-      preferences.begin("seismom5", false);
-      preferences.putBool("spk_hat", SPK_HAT);
-      preferences.end();
-      log("MQTT Speaker Request Enabled: ");
-      logln(SPK_HAT);
-    }
-
-    if (doc["lcd_brightness"] != nullptr) {
-      lcd_brightness = doc["lcd_brightness"];
-      preferences.begin("seismom5", false);
-      preferences.putUInt("brightness", lcd_brightness);
-      preferences.end();
-      log("MQTT LCD Standby Brightness: ");
-      logln(lcd_brightness);
-      M5.Axp.ScreenBreath(lcd_brightness);
-    }
-
-    if (doc["continuous_graph"] != nullptr) {
-      continuous_graph = doc["continuous_graph"];
-      preferences.begin("seismom5", false);
-      preferences.putBool("continuous", continuous_graph);
-      preferences.end();
-      log("MQTT Continuous Graph Enabled: ");
-      logln(continuous_graph);
-    }
-    
-    if (doc["update_period"] != nullptr) {
-      flush_period = doc["update_period"];
-      preferences.begin("seismom5", false);
-      preferences.putUShort("period", flush_period);
-      preferences.end();
-      log("MQTT Update Period: ");
-      log(String(flush_period));
-      logln(" secs.");
-    }
-  }
-}
-
-void onMqttConnect(bool sessionPresent) {
-  logln("Connected to MQTT.");
-  publish_available();
-  uint16_t packetIdSub = mqttClient.subscribe(MQTT_PUB_STATE, 0);
-  uint16_t packetIdSub2 = mqttClient.subscribe(MQTT_PUB_COMMAND, 0);
-}
-
-void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
-  logln("Disconnected from MQTT.");
-  if (WiFi.isConnected() && MQTT_active) {
-    xTimerStart(mqttReconnectTimer, 0);
-  }
-}
