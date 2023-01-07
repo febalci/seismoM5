@@ -52,6 +52,8 @@ Button B of M5stickC resets M5StickC for recalibration purposes.
 
 **LISTENING:** Everything is ready and listening for earthquakes.
 
+**EARTHQUAKE:** Earthquake is happening
+
 
 ### Events: m5seismo/event
 
@@ -114,7 +116,17 @@ You can connect to SeismoM5 with its IP address to monitor or change:
 
 - Change PGA Trigger Value
 
+- Enable/Disable Speaker
+
+- Change standby LCD Brightness
+
+- Enable/Disable continuous graph
+
+- Change the update period of event mqtt message to be send, even there is no earthquake, in seconds
+
 - Restart SeismoM5 for Calibration or any other purpose
+
+- Change Logging Type (Serial, WebSerial, Both or None)
 
 
 ## Mounting
