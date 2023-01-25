@@ -21,6 +21,7 @@ void publish_available() {
 
 void publish_mqtt(const char* topic, const char* msg, uint8_t qos, bool retain) {
   uint16_t packetIdPub1 = mqttClient.publish(topic, qos, retain, msg);
+  logln(msg);
 }
 
 void onMqttPublish(uint16_t packetId) {
