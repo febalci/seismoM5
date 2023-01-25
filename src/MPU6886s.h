@@ -11,6 +11,10 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#define MPU6886_SELF_TEST_X_ACCEL  0x0D
+#define MPU6886_SELF_TEST_Y_ACCEL  0x0E
+#define MPU6886_SELF_TEST_Z_ACCEL  0x0F
+
 #define MPU6886_ADDRESS            0x68
 #define MPU6886_WHOAMI             0x75
 #define MPU6886_ACCEL_INTEL_CTRL   0x69
@@ -47,7 +51,6 @@
 #define MPU6886_GYRO_CONFIG   0x1B
 #define MPU6886_ACCEL_CONFIG  0x1C
 #define MPU6886_ACCEL_CONFIG2 0x1D
-#define MPU6886_FIFO_EN       0x23
 
 #define MPU6886_ACCEL_XA_OFFSET_H 0x77
 #define MPU6886_ACCEL_XA_OFFSET_L 0x78
@@ -62,6 +65,10 @@
 #define MPU6886_GYRO_Y_OFFS_USRL 0x16
 #define MPU6886_GYRO_Z_OFFS_USRH 0x17
 #define MPU6886_GYRO_Z_OFFS_USRL 0x18
+
+#define MPU6886_FIFO_EN       0x23
+#define MPU6886_FIFO_COUNT  0x72
+#define MPU6886_FIFO_R_W    0x74
 
 //#define G (9.8)
 #define RtA     57.324841
@@ -80,7 +87,7 @@ class MPU6886s {
    public:
     MPU6886s();
     int Init(void);
-    void calibrateAccel(int bufsize, int acl_deadzone);
+    void calibrateAccel(int _bufsize, int _acl_deadzone);
     void enableWakeOnMotion(Ascale ascale, uint8_t thresh_num_lsb);
     void getAccelAdc(int16_t* ax, int16_t* ay, int16_t* az);
     void getGyroAdc(int16_t* gx, int16_t* gy, int16_t* gz);
@@ -93,8 +100,11 @@ class MPU6886s {
     void SetGyroFsr(Gscale scale);
     void SetAccelFsr(Ascale scale);
 
+    int16_t getXAccelOffset();
     void setXAccelOffset(int16_t offset);
+    int16_t getYAccelOffset();
     void setYAccelOffset(int16_t offset);
+    int16_t getZAccelOffset();
     void setZAccelOffset(int16_t offset);
     void setXGyroOffset(int16_t offset);
     void setYGyroOffset(int16_t offset);
@@ -104,15 +114,20 @@ class MPU6886s {
     void DisableAllIRQ();
     void ClearAllIRQ();
 
+    void setFIFOEnable(bool enableflag);
+    uint8_t ReadFIFO();
+    void ReadFIFOBuff(uint8_t* DataBuff, uint16_t Length);
+    uint16_t ReadFIFOCount();
+    void RestFIFO();
    public:
     float aRes, gRes;
 
    private:
-    int buffersize;     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
-    int acel_deadzone;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
+    int bufsize;     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
+    int acl_deadzone;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
 
     int16_t ax, ay, az;
-    int16_t mean_ax,mean_ay,mean_az,state=0;
+    int16_t mean_ax,mean_ay,mean_az,state;
     int16_t ax_offset,ay_offset,az_offset;
 
    private:
