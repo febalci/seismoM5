@@ -5,6 +5,7 @@
   #include <M5StickCPlus.h>
 #endif
 #include <math.h>
+#include "util.h"
 
 MPU6886s::MPU6886s() {
 }
@@ -52,7 +53,7 @@ int MPU6886s::Init(void) {
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_1, 1, &regdata);
     delay(10);
 
-// 0x6B, REGISTER 107 – POWER MANAGEMENT 1: Internal 20MHz oscillator
+// 0x6B, REGISTER 107 – POWER MANAGEMENT 1: The default value of CLKSEL[2:0] is 001
     regdata = (0x01 << 0);
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_1, 1, &regdata);
     delay(10);
@@ -68,14 +69,14 @@ int MPU6886s::Init(void) {
     delay(1);
 
 // 0x1A,REGISTER 26 – CONFIGURATION: DLPF_CFG - 1kHz
-    regdata = 0x00; // 0x01
+    regdata = 0b00000110; // 0x01;
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_CONFIG, 1, &regdata);
     delay(1);
 
 // 0X19, REGISTER 25 – SAMPLE RATE DIVIDER: Sample Rate Divider - SAMPLE_RATE = INTERNAL_SAMPLE_RATE / (1 + SMPLRT_DIV) Where INTERNAL_SAMPLE_RATE = 1 kHz
-//    regdata = 0x05;
-//    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_SMPLRT_DIV, 1, &regdata);
-//    delay(1);
+    regdata = 0x05; 
+    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_SMPLRT_DIV, 1, &regdata);
+    delay(1);
 
 // 0x38, REGISTER 56 – INTERRUPT ENABLE
     regdata = 0x00;
@@ -135,22 +136,32 @@ I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_2, 1, &regdata);
     setXAccelOffset(0);
     setYAccelOffset(0);
     setZAccelOffset(0);
+
+    state = 0;
     return 0;
 }
 
-void MPU6886s::calibrateAccel(int bufsize, int acl_deadzone) {
-    buffersize = bufsize;
-    acel_deadzone = acl_deadzone;
+void MPU6886s::calibrateAccel(int _bufsize, int _acl_deadzone) {
+    bufsize = _bufsize;
+    acl_deadzone = _acl_deadzone;
+    unsigned char regdata;
+    float factoryTrim;
 
     if (state==0){
-        Serial.println("\nReading sensors for first time...");
+        logln("\nReading sensors for first time...");
         meansensors();
+        log("\nFirst Read Mean Values:\t");
+        log(String(mean_ax)); 
+        log("\t");
+        log(String(mean_ay)); 
+        log("\t");
+        logln(String(mean_az)); 
         state++;
         delay(1000);
     }
  
     if (state==1) {
-        Serial.println("\nCalculating offsets...");
+        logln("\nCalculating offsets...");
         calibration();
         state++;
         delay(1000);
@@ -158,21 +169,21 @@ void MPU6886s::calibrateAccel(int bufsize, int acl_deadzone) {
  
     if (state==2) {
         meansensors();
-        Serial.println("\nFINISHED!");
-        Serial.print("\nSensor readings with offsets:\t");
-        Serial.print(mean_ax); 
-        Serial.print("\t");
-        Serial.print(mean_ay); 
-        Serial.print("\t");
-        Serial.println(mean_az); 
-        Serial.print("Your offsets:\t");
-        Serial.print(ax_offset); 
-        Serial.print("\t");
-        Serial.print(ay_offset); 
-        Serial.print("\t");
-        Serial.println(az_offset); 
-        Serial.println("\nData is printed as: acelX acelY acelZ");
-        Serial.println("Check that your sensor readings are close to 16384 0 0");
+        logln("\nFINISHED!");
+        log("\nSensor mean readings with offsets:\t");
+        log(String(mean_ax)); 
+        log("\t");
+        log(String(mean_ay)); 
+        log("\t");
+        logln(String(mean_az)); 
+        log("Your calculated offsets:\t");
+        log(String(ax_offset)); 
+        log("\t");
+        log(String(ay_offset)); 
+        log("\t");
+        logln(String(az_offset)); 
+        logln("\nData is printed as: acelX acelY acelZ");
+        logln("Check that your sensor readings are close to 16384 0 0");
         state++;
     }
 }
@@ -180,63 +191,63 @@ void MPU6886s::calibrateAccel(int bufsize, int acl_deadzone) {
 void MPU6886s::meansensors(){
   long i=0,buff_ax=0,buff_ay=0,buff_az=0;
 
-  while (i<(buffersize+101)){
+  while (i<(bufsize+101)){
     // read raw accel/gyro measurements from device
     getAccelAdc(&ax, &ay, &az);
-    if (i>100 && i<=(buffersize+100)){ //First 100 measures are discarded
+/*
+    log(String(ax)); 
+    log("\t");
+    log(String(ay)); 
+    log("\t");
+    log(String(az));
+    log("\t");
+    log(String(ax_offset)); 
+    log("\t");
+    log(String(ay_offset)); 
+    log("\t");
+    logln(String(az_offset));
+*/
+    if (i>100 && i<=(bufsize+100)){ //First 100 measures are discarded
       buff_ax=buff_ax+ax;
       buff_ay=buff_ay+ay;
       buff_az=buff_az+az;
     }
-    if (i==(buffersize+100)){
-      mean_ax=buff_ax/buffersize;
-      mean_ay=buff_ay/buffersize;
-      mean_az=buff_az/buffersize;
+    if (i==(bufsize+100)){
+      mean_ax=buff_ax/bufsize;
+      mean_ay=buff_ay/bufsize;
+      mean_az=buff_az/bufsize;
     }
     i++;
-    delay(2); //Needed so we don't get repeated measures
+    delay(8); //Needed so we don't get repeated measures
   }
 }
 
 void MPU6886s::calibration(){
-  uint8_t buf[2];
-
-  I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_XA_OFFSET_H, 2, buf);
-  ax_offset = ((int16_t)buf[0] << 8) | buf[1];
-  I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_YA_OFFSET_H, 2, buf);
-  ay_offset = ((int16_t)buf[0] << 8) | buf[1];
-  I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_ZA_OFFSET_H, 2, buf);
-  az_offset = ((int16_t)buf[0] << 8) | buf[1];
-
-  mean_ax = mean_ax - 16384;
-
-  int sign;
-  if (mean_ax >=0) sign = +1; else sign = -1;
-  ax_offset -= sign * ( ( (uint16_t)abs(mean_ax) >> 4) << 1);
-  if (mean_ay >=0) sign = +1; else sign = -1;
-  ay_offset -= sign * ( ( (uint16_t)abs(mean_ay) >> 4) << 1);
-  if (mean_az >=0) sign = +1; else sign = -1;
-  az_offset -= sign * ( ( (uint16_t)abs(mean_az) >> 4) << 1);
-
+  ax_offset=(16384-mean_ax)/8;
+  ay_offset=-mean_ay/8;
+  az_offset=-mean_az/8;
   while (1){
     int ready=0;
     setXAccelOffset(ax_offset);
     setYAccelOffset(ay_offset);
     setZAccelOffset(az_offset);
     meansensors();
-    Serial.print(".");
+    log("Calibrating:\t");
+    log(String(mean_ax)); 
+    log("\t");
+    log(String(mean_ay)); 
+    log("\t");
+    logln(String(mean_az));
 
-    if (abs(16384-mean_ax)<=acel_deadzone) ready++;
-    else ax_offset=ax_offset+(16384-mean_ax)/acel_deadzone;
+    if (abs(16384-mean_ax)<=acl_deadzone) ready++;
+    else ax_offset=ax_offset+(16384-mean_ax)/acl_deadzone;
  
-    if (abs(mean_ay)<=acel_deadzone) ready++;
-    else ay_offset=ay_offset-mean_ay/acel_deadzone;
+    if (abs(mean_ay)<=acl_deadzone) ready++;
+    else ay_offset=ay_offset-mean_ay/acl_deadzone;
  
-    if (abs(mean_az)<=acel_deadzone) ready++;
-    else az_offset=az_offset-mean_az/acel_deadzone;
+    if (abs(mean_az)<=acl_deadzone) ready++;
+    else az_offset=az_offset-mean_az/acl_deadzone;
  
-//    Serial.println(ready);
-
     if (ready==3) break;
   }
 }
@@ -419,31 +430,63 @@ void MPU6886s::SetAccelFsr(Ascale scale) {
     getAres();
 }
 
+int16_t MPU6886s::getXAccelOffset() {
+    uint8_t buf[2];
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_XA_OFFSET_H, 2, buf);
+	return (((int16_t)buf[0]) << 8) | buf[1];
+}
 
 void MPU6886s::setXAccelOffset(int16_t offset) {
     uint8_t rawData[2];
+    unsigned char tempdata[1];
+
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_XA_OFFSET_L, 1, tempdata);
+
     rawData[0] = (offset >> 8) & 0xFF;
-    rawData[1] = (offset)      & 0xFF;
-    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_XA_OFFSET_H, 1, &rawData[0]);
+    rawData[1] = (offset)      & 0xFE|tempdata[0] & 1;
+
+    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_XA_OFFSET_H, 2,  &rawData[0]);
     delay(1);
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_XA_OFFSET_L, 1, &rawData[1]);
     delay(1);
 }
 
+int16_t MPU6886s::getYAccelOffset() {
+    uint8_t buf[2];
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_YA_OFFSET_H, 2, buf);
+	return (((int16_t)buf[0]) << 8) | buf[1];
+}
+
 void MPU6886s::setYAccelOffset(int16_t offset) {
     uint8_t rawData[2];
+    unsigned char tempdata[1];
+
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_YA_OFFSET_L, 1, tempdata);
+
     rawData[0] = (offset >> 8) & 0xFF;
-    rawData[1] = (offset)      & 0xFF;
+    rawData[1] = (offset)      & 0xFE|tempdata[0] & 1;
+
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_YA_OFFSET_H, 1, &rawData[0]);
     delay(1);    
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_YA_OFFSET_L, 1, &rawData[1]);
     delay(1);    
 }
 
+int16_t MPU6886s::getZAccelOffset() {
+    uint8_t buf[2];
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_ZA_OFFSET_H, 2, buf);
+	return (((int16_t)buf[0]) << 8) | buf[1];
+}
+
 void MPU6886s::setZAccelOffset(int16_t offset) {
     uint8_t rawData[2];
+    unsigned char tempdata[1];
+
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_ZA_OFFSET_L, 1, tempdata);
+
     rawData[0] = (offset >> 8) & 0xFF;
-    rawData[1] = (offset)      & 0xFF;
+    rawData[1] = (offset)      & 0xFE|tempdata[0] & 1;
+
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_ZA_OFFSET_H, 1, &rawData[0]);
     delay(1);  
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_ZA_OFFSET_L, 1, &rawData[1]);
@@ -521,4 +564,44 @@ void MPU6886s::ClearAllIRQ() {
     uint8_t tempdata = 0x00;
     I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_FIFO_WM_INT_STATUS, 1, &tempdata);
     I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_INT_STATUS, 1, &tempdata);
+}
+
+void MPU6886s::setFIFOEnable(bool enableflag) {
+    uint8_t regdata = 0;
+    regdata         = enableflag ? 0x08 : 0x00; // 0x18 for both gyro and accel
+    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_FIFO_EN, 1, &regdata);
+    regdata = enableflag ? 0x40 : 0x00;
+    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_USER_CTRL, 1, &regdata);
+}
+
+uint8_t MPU6886s::ReadFIFO() {
+    uint8_t ReData = 0;
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_FIFO_R_W, 1, &ReData);
+    return ReData;
+}
+
+void MPU6886s::ReadFIFOBuff(uint8_t* DataBuff, uint16_t Length) {
+    uint8_t number = Length / 210;
+    for (uint8_t i = 0; i < number; i++) {
+        I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_FIFO_R_W, 210,
+                        &DataBuff[i * 210]);
+    }
+
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_FIFO_R_W, Length % 210,
+                    &DataBuff[number * 210]);
+}
+
+void MPU6886s::RestFIFO() {
+    uint8_t buf_out;
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_USER_CTRL, 1, &buf_out);
+    buf_out |= 0x04;
+    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_USER_CTRL, 1, &buf_out);
+}
+
+uint16_t MPU6886s::ReadFIFOCount() {
+    uint8_t Buff[2];
+    uint16_t ReData = 0;
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_FIFO_COUNT, 2, Buff);
+    ReData = (Buff[0] << 8) | Buff[1];
+    return ReData;
 }
