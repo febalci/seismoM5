@@ -109,7 +109,7 @@ There is no need to send this full message, any item can be send standalone or t
 ## SeismoM5 Web Page
 
 <p align="center">
-<img src="pics/Screen Shot 2023-01-07 at 13.43.37.png" width="245" height="371">
+<img src="pics/Screenshot 2023-01-29 at 21.01.02.jpg" width="245" height="371">
 </p>
 
 You can connect to SeismoM5 either with http://seismom5.local address or its IP address to monitor or change:
