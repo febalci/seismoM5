@@ -28,34 +28,6 @@ bool MQTT_active = true; // Enable / Disable MQTT for initial start only
 #define spkFreq 50
 #define spkResolution 10
 
-// Screen coordinates
-#define graph_x_axis 7 // X Coordinate for Vertical axis line
-uint8_t graph_x_start = 8; // X Coordinate for where the graph starts (increases)
-uint8_t previous_graph_y[3];
-#ifdef STICKC
-  // Graph coordinates for main screen: M5StickC: 160x80
-  uint8_t graph_y_axis[3] = {25,35,45}; // Y coordinates for X,Y,Z horizontal axis lines
-  #define graph_y_axis_boundary 5 // pixels
-  #define graph_x_limit 155 // X Coordinate limit for graph
-  #define graph_scale 50
-  #define graph_clear_y_height 37
-  #define pga_print_x 120
-  #define pga_print_y 0
-  #define mqtt_print_x 130 // 120 for text size 1
-  #define mqtt_print_y 70
-#else
-  // Graph coordinates for main screen: M5StickCPlus: 240x135 pixels
-  uint8_t graph_y_axis[3] = {35,65,95}; // Y coordinates for X,Y,Z horizontal axis lines
-  #define graph_y_axis_boundary 15 // pixels
-  #define graph_x_limit 235 // X Coordinate limit for graph
-  #define graph_scale 150
-  #define graph_clear_y_height 97
-  #define pga_print_x 200
-  #define pga_print_y 2
-  #define mqtt_print_x 200
-  #define mqtt_print_y 125
-#endif
-
 // MPU6886 Calibration Parameters
 #define buffersize 1000     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
 #define acel_deadzone 8     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
@@ -63,8 +35,8 @@ uint8_t previous_graph_y[3];
 #define eq_pet 40           // Post Event Time for PGA Trigger (4 seconds)
 #define gravity 16384.0     // Gravity
 //STA/LTA
-#define trigger_threshold 2.5
-#define detrigger_threshold 1.4
+#define trigger_threshold 3.5
+#define detrigger_threshold 1.5
 
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML>
@@ -209,7 +181,7 @@ const char index_html[] PROGMEM = R"rawliteral(
             <input id="new_per" name="new_per" maxlength="4" value=%PERPLACEHOLDER%>
             <br />
             <br />
-            <input type="checkbox" id='slta' name='slta'> <label for="slta">Use STA/LTA Method</label><br>
+            <input type="checkbox" id='slta' name='slta' onclick="disablePga();"> <label for="slta">Use STA/LTA Method</label><br>
             <br />
           </fieldset>
           <fieldset>
@@ -258,6 +230,16 @@ const char index_html[] PROGMEM = R"rawliteral(
 	    document.getElementById('spk').checked = %SPKPLACEHOLDER%;
 	    document.getElementById('con').checked = %CONPLACEHOLDER%;
 	    document.getElementById('slta').checked = %SLTAPLACEHOLDER%;
+      document.getElementById('new_pga').disabled = document.getElementById('slta').checked;
+      function disablePga()
+      {
+        if (document.getElementById('slta').checked) 
+        {
+            document.getElementById('new_pga').disabled = true;
+        } else {
+            document.getElementById('new_pga').disabled = false;
+        }
+      }
     </script>
   </body>
 </html>
