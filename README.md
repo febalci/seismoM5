@@ -37,12 +37,12 @@ Button B of M5stickC resets M5StickC for recalibration purposes.
 
 ## MQTT
 
-### Availability: m5seismo/status
+### Availability: seismoM5/status
 
 "**online**" or "**offline**"
 
 
-### State: m5seismo/state
+### State: seismoM5/state
 
 **INIT_MPU:** Init MPU6886.
 
@@ -55,7 +55,7 @@ Button B of M5stickC resets M5StickC for recalibration purposes.
 **EARTHQUAKE:** Earthquake is happening
 
 
-### Events: m5seismo/event
+### Events: seismoM5/event
 
 **{"x":"-85","y":"-1097","z":"16305","pga":"0.0007"}**   <sup>Sample</sup>
 
@@ -70,12 +70,12 @@ or
 [Japan Meteorological Agency seismic intensity scale](https://en.wikipedia.org/wiki/Japan_Meteorological_Agency_seismic_intensity_scale#Scale_overview)
 
 
-### PGA Trigger: m5seismo/pga_trigger
+### PGA Trigger: seismoM5/pga_trigger
 
 Displays PGA trigger value for the earthquake alert. The first time SeismoM5 works after the first upload, the default PGA Trigger value will be 0.025 g. On screen, top right corner shows the PGA Trigger value.
 
 
-### Commands: m5seismo/command
+### Commands: seismoM5/command
 
 Should be send in JSON format as follows: 
 ```
