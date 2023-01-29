@@ -21,6 +21,8 @@ void publish_available() {
 
 void publish_mqtt(const char* topic, const char* msg, uint8_t qos, bool retain) {
   uint16_t packetIdPub1 = mqttClient.publish(topic, qos, retain, msg);
+  if (topic == MQTT_PUB_PGA_TRIGGER) log("PGA TRIGGER: ");
+  else if (topic == MQTT_PUB_STATE) log("STATE: ");
   logln(msg);
 }
 

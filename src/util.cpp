@@ -24,8 +24,6 @@ bool webSerialEnabled; // Disable until WebSerial is loaded
 
 Preferences preferences; // To store and read parameters
 
-
-
 void pref_init() {
   preferences.begin("seismom5", false);
   pga_trigger = preferences.getFloat("pga_trigger", 0.025);
