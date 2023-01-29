@@ -44,47 +44,47 @@ int MPU6886s::Init(void) {
     delay(1);
 
 // 0x6B, REGISTER 107 – POWER MANAGEMENT 1:
-    regdata = 0x00;
+    regdata = 0b00000000; // 0x00
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_1, 1, &regdata);
     delay(10);
 
 // 0x6B, REGISTER 107 – POWER MANAGEMENT 1: Reset internal registers
-    regdata = (0x01 << 7);
+    regdata = 0b10000000; // (0x01 << 7)
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_1, 1, &regdata);
     delay(10);
 
 // 0x6B, REGISTER 107 – POWER MANAGEMENT 1: The default value of CLKSEL[2:0] is 001
-    regdata = (0x01 << 0);
+    regdata = 0b00000001; // (0x01 << 0)
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_1, 1, &regdata);
     delay(10);
 
 // 0x1C, REGISTER 28 – ACCELEROMETER CONFIGURATION: 0b00010000 : Select +-2g for accel
-    regdata = 0x00;
+    regdata = 0b00000000; // 0x00
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_CONFIG, 1, &regdata);
     delay(1);
 
 // 0x1B,REGISTER 27 – GYROSCOPE CONFIGURATION: 0b00011000 : Select +-250dps for gyro
-    regdata = 0x00;
+    regdata = 0b00000000; // 0x00
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_GYRO_CONFIG, 1, &regdata);
     delay(1);
 
 // 0x1A,REGISTER 26 – CONFIGURATION: DLPF_CFG - 1kHz
-    regdata = 0b00000110; // 0x01;
+    regdata = 0b00000110; // 0x01
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_CONFIG, 1, &regdata);
     delay(1);
 
 // 0X19, REGISTER 25 – SAMPLE RATE DIVIDER: Sample Rate Divider - SAMPLE_RATE = INTERNAL_SAMPLE_RATE / (1 + SMPLRT_DIV) Where INTERNAL_SAMPLE_RATE = 1 kHz
-    regdata = 0x05; 
+    regdata = 0b00000101; // 0x05
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_SMPLRT_DIV, 1, &regdata);
     delay(1);
 
 // 0x38, REGISTER 56 – INTERRUPT ENABLE
-    regdata = 0x00;
+    regdata = 0b00000000; // 0x00
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_INT_ENABLE, 1, &regdata);
     delay(1);
 
 // Disable Gyrometer
-regdata = 0b00000111;  // set gyro x, y, and z to disable
+regdata = 0b00000111; // set gyro x, y, and z to disable
 I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_2, 1, &regdata);
 
 /* 0x1D, REGISTER 29 – ACCELEROMETER CONFIGURATION 2
@@ -111,12 +111,12 @@ I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_2, 1, &regdata);
     delay(1);
 
 // 0x6A, REGISTER 106 – USER CONTROL:
-    regdata = 0x00;
+    regdata = 0b00000000; // 0x00
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_USER_CTRL, 1, &regdata);
     delay(1);
 
 // 0x23, REGISTER 35 – FIFO ENABLE:
-    regdata = 0x00;
+    regdata = 0b00000000; // 0x00
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_FIFO_EN, 1, &regdata);
     delay(1);
 
@@ -438,14 +438,23 @@ int16_t MPU6886s::getXAccelOffset() {
 
 void MPU6886s::setXAccelOffset(int16_t offset) {
     uint8_t rawData[2];
-    unsigned char tempdata[1];
+    uint8_t tempdata;
+    uint8_t mask_bit = 1;
 
-    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_XA_OFFSET_L, 1, tempdata);
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_XA_OFFSET_L, 1, &tempdata);
+    if (tempdata % 2) {
+        mask_bit = 0;
+    }
 
+    if (mask_bit) {
+        offset = offset & ~mask_bit;  // Preserve temperature compensation bit
+    } else {
+        offset = offset | 0x0001;  // Preserve temperature compensation bit
+    }
     rawData[0] = (offset >> 8) & 0xFF;
-    rawData[1] = (offset)      & 0xFE|tempdata[0] & 1;
+    rawData[1] = (offset) & 0xFF;
 
-    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_XA_OFFSET_H, 2,  &rawData[0]);
+    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_XA_OFFSET_H, 1,  &rawData[0]);
     delay(1);
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_XA_OFFSET_L, 1, &rawData[1]);
     delay(1);
@@ -459,12 +468,22 @@ int16_t MPU6886s::getYAccelOffset() {
 
 void MPU6886s::setYAccelOffset(int16_t offset) {
     uint8_t rawData[2];
-    unsigned char tempdata[1];
+    uint8_t tempdata;
+    uint8_t mask_bit = 1;
 
-    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_YA_OFFSET_L, 1, tempdata);
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_YA_OFFSET_L, 1, &tempdata);
+    if (tempdata % 2) {
+        mask_bit = 0;
+    }
+
+    if (mask_bit) {
+        offset = offset & ~mask_bit;  // Preserve temperature compensation bit
+    } else {
+        offset = offset | 0x0001;  // Preserve temperature compensation bit
+    }
 
     rawData[0] = (offset >> 8) & 0xFF;
-    rawData[1] = (offset)      & 0xFE|tempdata[0] & 1;
+    rawData[1] = (offset) & 0xFF;
 
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_YA_OFFSET_H, 1, &rawData[0]);
     delay(1);    
@@ -480,12 +499,22 @@ int16_t MPU6886s::getZAccelOffset() {
 
 void MPU6886s::setZAccelOffset(int16_t offset) {
     uint8_t rawData[2];
-    unsigned char tempdata[1];
+    uint8_t tempdata;
+    uint8_t mask_bit = 1;
 
-    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_ZA_OFFSET_L, 1, tempdata);
+    I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_ZA_OFFSET_L, 1, &tempdata);
+    if (tempdata % 2) {
+        mask_bit = 0;
+    }
+
+    if (mask_bit) {
+        offset = offset & ~mask_bit;  // Preserve temperature compensation bit
+    } else {
+        offset = offset | 0x0001;  // Preserve temperature compensation bit
+    }
 
     rawData[0] = (offset >> 8) & 0xFF;
-    rawData[1] = (offset)      & 0xFE|tempdata[0] & 1;
+    rawData[1] = (offset) & 0xFF;
 
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_ZA_OFFSET_H, 1, &rawData[0]);
     delay(1);  
