@@ -2,18 +2,19 @@
 #define _config_H_
 
 //WiFi Parameters
-#define WIFI_SSID "XXXXXXXX"
-#define WIFI_PASS "XXXXXXXX"
+#define WIFI_SSID "XXXXXXX"
+#define WIFI_PASS "XXXXXXX"
+#define WIFI_HOSTNAME "seismoM5"
 
 // MQTT Parameters
 bool MQTT_active = true; // Enable / Disable MQTT for initial start only
 
-#define MQTT_SERVER "XXXXXXXX"
+#define MQTT_SERVER "XXXXXXX"
 #define MQTT_PORT 1883
-#define MQTT_USER "XXXXXXXX"
-#define MQTT_PASS "XXXXXXXX"
+#define MQTT_USER "XXXXXXX"
+#define MQTT_PASS "XXXXXXX"
 
-#define MQTT_PUB_TOPIC_MAIN "m5seismo"
+#define MQTT_PUB_TOPIC_MAIN "seismoM5"
 
 #define MQTT_PUB_EVENT (MQTT_PUB_TOPIC_MAIN "/event")
 #define MQTT_PUB_STATE  (MQTT_PUB_TOPIC_MAIN "/state")
@@ -27,92 +28,15 @@ bool MQTT_active = true; // Enable / Disable MQTT for initial start only
 #define spkFreq 50
 #define spkResolution 10
 
-// Screen coordinates
-#define graph_x_axis 7 // X Coordinate for Vertical axis line
-uint8_t graph_x_start = 8; // X Coordinate for where the graph starts (increases)
-uint8_t previous_graph_y[3];
-#ifdef STICKC
-  // Graph coordinates for main screen: M5StickC: 160x80
-  uint8_t graph_y_axis[3] = {25,35,45}; // Y coordinates for X,Y,Z horizontal axis lines
-  #define graph_y_axis_boundary 5 // pixels
-  #define graph_x_limit 155 // X Coordinate limit for graph
-  #define graph_scale 50
-  #define graph_clear_y_height 37
-  #define pga_print_x 120
-  #define pga_print_y 0
-  #define mqtt_print_x 130 // 120 for text size 1
-  #define mqtt_print_y 70
-#else
-  // Graph coordinates for main screen: M5StickCPlus: 240x135 pixels
-  uint8_t graph_y_axis[3] = {35,65,95}; // Y coordinates for X,Y,Z horizontal axis lines
-  #define graph_y_axis_boundary 15 // pixels
-  #define graph_x_limit 235 // X Coordinate limit for graph
-  #define graph_scale 150
-  #define graph_clear_y_height 97
-  #define pga_print_x 200
-  #define pga_print_y 2
-  #define mqtt_print_x 200
-  #define mqtt_print_y 125
-#endif
-
 // MPU6886 Calibration Parameters
-#define buffersize 1250     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
+#define buffersize 1000     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
 #define acel_deadzone 8     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
 #define scale_factor 1      // scale_factor
-#define eq_pet 40           // Post Event Time (Around 5 secs)
-
-const char update_html[] PROGMEM = R"rawliteral(
-<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>
-<title>SeismoM5</title>
-<h1>SeismoM5 OTA</h1>
-<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>
-<input type='file' name='update' id='file' onchange='sub(this)' style=display:none>
-<label id='file-input' for='file'>   Choose file...</label>
-<input type='submit' class=btn value='Update'>
-<br><br>
-<div id='prg'></div>
-<br><div id='prgbar'><div id='bar'></div></div><br></form>
-<script>
-function sub(obj){
-var fileName = obj.value.split('\\\\');
-document.getElementById('file-input').innerHTML = '   '+ fileName[fileName.length-1];
-};
-$('form').submit(function(e){
-e.preventDefault();
-var form = $('#upload_form')[0];
-var data = new FormData(form);
-$.ajax({
-url: '/doUpdate',
-type: 'POST',
-data: data,
-contentType: false,
-processData:false,
-xhr: function() {
-var xhr = new window.XMLHttpRequest();
-xhr.upload.addEventListener('progress', function(evt) {
-if (evt.lengthComputable) {
-var per = evt.loaded / evt.total;
-$('#prg').html('progress: ' + Math.round(per*100) + '%');
-$('#bar').css('width',Math.round(per*100) + '%');
-}
-}, false);
-return xhr;
-},
-success:function(d, s) {
-console.log('success!') 
-},
-error: function (a, b, c) {
-}
-});
-});
-</script>
-<style>#file-input,input{width:100%;height:44px;border-radius:4px;margin:10px auto;font-size:15px}
-input{background:#f1f1f1;border:0;padding:0 15px}body{background:#3498db;font-family:sans-serif;font-size:14px;color:#777}
-#file-input{padding:0;border:1px solid #ddd;line-height:44px;text-align:left;display:block;cursor:pointer}
-#bar,#prgbar{background-color:#f1f1f1;border-radius:10px}#bar{background-color:#3498db;width:0%;height:10px}
-form{background:#fff;max-width:258px;margin:75px auto;padding:30px;border-radius:5px;text-align:center}
-.btn{background:#3498db;color:#fff;cursor:pointer}h1{color:white;text-align:center;}</style>
-)rawliteral";
+#define eq_pet 40           // Post Event Time for PGA Trigger (4 seconds)
+#define gravity 16384.0     // Gravity
+//STA/LTA
+#define trigger_threshold 3.5
+#define detrigger_threshold 1.5
 
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML>
@@ -256,6 +180,9 @@ const char index_html[] PROGMEM = R"rawliteral(
             <label for="new_per">Update Period (sec)</label><br>
             <input id="new_per" name="new_per" maxlength="4" value=%PERPLACEHOLDER%>
             <br />
+            <br />
+            <input type="checkbox" id='slta' name='slta' onclick="disablePga();"> <label for="slta">Use STA/LTA Method</label><br>
+            <br />
           </fieldset>
           <fieldset>
             <legend>
@@ -282,14 +209,17 @@ const char index_html[] PROGMEM = R"rawliteral(
         <button onclick="window.location.href='/webserial';"> Web Serial</button>
       </div>
       <br />
-      <div class="button-container-div">
-        <button onclick="window.location.href='/update';"> OTA Firmware Update</button>
-      </div>
+      <br />
+      <form action='recal' method='get'>
+        <div class="button-container-div">
+          <button class='button bred'>Recalibrate MPU</button>
+        </div>
+      </form>
       <br />
       <br />
       <form action='rt' method='get' onsubmit='return confirm("Confirm Reset M5");'>
         <div class="button-container-div">
-          <button class='button bred'>Reset M5 for Recalibration</button>
+          <button class='button bred'>Reset M5</button>
         </div>
       </form>
       <br />
@@ -297,12 +227,22 @@ const char index_html[] PROGMEM = R"rawliteral(
     </div>
     <script>
       document.getElementById('lg').value = %LOGPLACEHOLDER%;
-	  document.getElementById('spk').checked = %SPKPLACEHOLDER%;
-	  document.getElementById('con').checked = %CONPLACEHOLDER%;
+	    document.getElementById('spk').checked = %SPKPLACEHOLDER%;
+	    document.getElementById('con').checked = %CONPLACEHOLDER%;
+	    document.getElementById('slta').checked = %SLTAPLACEHOLDER%;
+      document.getElementById('new_pga').disabled = document.getElementById('slta').checked;
+      function disablePga()
+      {
+        if (document.getElementById('slta').checked) 
+        {
+            document.getElementById('new_pga').disabled = true;
+        } else {
+            document.getElementById('new_pga').disabled = false;
+        }
+      }
     </script>
   </body>
 </html>
 )rawliteral";
 
 #endif
-

@@ -16,13 +16,13 @@ SeismoM5 is an Earthquake Sensor Implementation on M5StickC, using its own MPU68
 
 I am nowhere near being a Seismologist or I understand anything about. It is just that I live in an overly active Seismic zone. The idea came up for adding an earthquake sensor to the smart home; to shut gas valves off and open some rolling shutters for an escape route during an earthquake.
 
-So i tried some signal algorithms to get the most effective earthquake trigger mechanism possible. Among these, STA/LTA method was very close to get rid of the noise and unwanted man made noises and peaks. However, the test results were not succesfull for me. So i opted out for a simple PGA calculation:
+So i tried some signal algorithms to get the most effective earthquake trigger mechanism possible. There are 2 triggering methods; PGA threshold trigger and STA/LTA trigger method.
 
 ``
 pga = sqrt(x_vector_mag * x_vector_mag + y_vector_mag * y_vector_mag + z_vector_mag * z_vector_mag)*scale_factor;
 ``
 
-The triggering mechanism is, if PGA exceeds limit, that is an earthquake. PGA gives intensity too, but i do not know how reliable that is.
+PGA gives intensity too, but i do not know how reliable that is.
 
 ## Usage
 
@@ -37,12 +37,12 @@ Button B of M5stickC resets M5StickC for recalibration purposes.
 
 ## MQTT
 
-### Availability: m5seismo/status
+### Availability: seismoM5/status
 
 "**online**" or "**offline**"
 
 
-### State: m5seismo/state
+### State: seismoM5/state
 
 **INIT_MPU:** Init MPU6886.
 
@@ -55,7 +55,7 @@ Button B of M5stickC resets M5StickC for recalibration purposes.
 **EARTHQUAKE:** Earthquake is happening
 
 
-### Events: m5seismo/event
+### Events: seismoM5/event
 
 **{"x":"-85","y":"-1097","z":"16305","pga":"0.0007"}**   <sup>Sample</sup>
 
@@ -70,12 +70,12 @@ or
 [Japan Meteorological Agency seismic intensity scale](https://en.wikipedia.org/wiki/Japan_Meteorological_Agency_seismic_intensity_scale#Scale_overview)
 
 
-### PGA Trigger: m5seismo/pga_trigger
+### PGA Trigger: seismoM5/pga_trigger
 
 Displays PGA trigger value for the earthquake alert. The first time SeismoM5 works after the first upload, the default PGA Trigger value will be 0.025 g. On screen, top right corner shows the PGA Trigger value.
 
 
-### Commands: m5seismo/command
+### Commands: seismoM5/command
 
 Should be send in JSON format as follows: 
 ```
@@ -109,29 +109,39 @@ There is no need to send this full message, any item can be send standalone or t
 ## SeismoM5 Web Page
 
 <p align="center">
-<img src="pics/Screen Shot 2023-01-07 at 13.43.37.png" width="245" height="371">
+<img src="pics/Screenshot 2023-01-29 at 21.01.02.jpg" width="245" height="371">
 </p>
 
-You can connect to SeismoM5 with its IP address to monitor or change:
-
-- WebSerial Output
-
-- OTA Firmware Update
+You can connect to SeismoM5 either with http://seismom5.local address or its IP address to monitor or change:
 
 - Change PGA Trigger Value
 
-- Enable/Disable Speaker
-
 - Change standby LCD Brightness
-
-- Enable/Disable continuous graph
 
 - Change the update period of event mqtt message to be send, even there is no earthquake, in seconds
 
-- Restart SeismoM5 for Calibration or any other purpose
+- Use STA/LTA Method for triggering, this disables PGA Triggering.
+
+- Enable/Disable Speaker
+
+- Enable/Disable continuous graph
 
 - Change Logging Type (Serial, WebSerial, Both or None)
 
+- WebSerial Output
+
+- Recalibrate MPU
+
+- Restart SeismoM5 ESP32
+
+## OTA Firmware Upload
+
+The first upload should be a Serial connection upload. After that, these 2 lines can be uncommented (delete ";" characters) from platformio.ini file for OTA firmware uploading.
+
+```
+;upload_port = seismoM5.local
+;upload_protocol = espota
+```
 
 ## Mounting
 
