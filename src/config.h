@@ -230,14 +230,14 @@ const char index_html[] PROGMEM = R"rawliteral(
 	    document.getElementById('spk').checked = %SPKPLACEHOLDER%;
 	    document.getElementById('con').checked = %CONPLACEHOLDER%;
 	    document.getElementById('slta').checked = %SLTAPLACEHOLDER%;
-      document.getElementById('new_pga').disabled = document.getElementById('slta').checked;
+      document.getElementById('new_pga').readOnly = document.getElementById('slta').checked;
       function disablePga()
       {
         if (document.getElementById('slta').checked) 
         {
-            document.getElementById('new_pga').disabled = true;
+            document.getElementById('new_pga').readOnly = true;
         } else {
-            document.getElementById('new_pga').disabled = false;
+            document.getElementById('new_pga').readOnly = false;
         }
       }
     </script>
