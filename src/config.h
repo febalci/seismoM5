@@ -1,10 +1,18 @@
 #ifndef _config_H_
 #define _config_H_
 
+//#define SLAVE // Uncomment this only for Slave M5sticks
+#define MASTER_HOST "seismoM5"
+#define SLAVE_HOST "seismoS1"
+
 //WiFi Parameters
 #define WIFI_SSID "XXXXXXX"
 #define WIFI_PASS "XXXXXXX"
-#define WIFI_HOSTNAME "seismoM5"
+#ifdef SLAVE
+  #define WIFI_HOSTNAME SLAVE_HOST
+#else
+  #define WIFI_HOSTNAME MASTER_HOST
+#endif
 
 // MQTT Parameters
 bool MQTT_active = true; // Enable / Disable MQTT for initial start only
@@ -14,7 +22,13 @@ bool MQTT_active = true; // Enable / Disable MQTT for initial start only
 #define MQTT_USER "XXXXXXX"
 #define MQTT_PASS "XXXXXXX"
 
-#define MQTT_PUB_TOPIC_MAIN "seismoM5"
+#ifdef SLAVE
+  #define MQTT_PUB_TOPIC_MAIN MASTER_HOST "/" SLAVE_HOST
+  #define MQTT_PUB_STATE_SLAVE (MQTT_PUB_TOPIC_MAIN "/na")
+#else
+  #define MQTT_PUB_TOPIC_MAIN MASTER_HOST
+  #define MQTT_PUB_STATE_SLAVE MQTT_PUB_TOPIC_MAIN "/" SLAVE_HOST "/state"
+#endif
 
 #define MQTT_PUB_EVENT (MQTT_PUB_TOPIC_MAIN "/event")
 #define MQTT_PUB_STATE  (MQTT_PUB_TOPIC_MAIN "/state")
@@ -35,8 +49,8 @@ bool MQTT_active = true; // Enable / Disable MQTT for initial start only
 #define eq_pet 40           // Post Event Time for PGA Trigger (4 seconds)
 #define gravity 16384.0     // Gravity
 //STA/LTA
-#define trigger_threshold 3.5
-#define detrigger_threshold 1.5
+#define trigger_threshold 4
+#define detrigger_threshold 2
 
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML>
@@ -159,7 +173,7 @@ const char index_html[] PROGMEM = R"rawliteral(
   </head>
   <body onload="clearInp()">
     <div class="topnav">
-      <h1> SeismoM5 Web Server </h3>
+      <h1 id = 'header'> SeismoM5 Web Server </h3>
         <h2> Configuration </h2>
     </div>
     <div style='text-align:left;display:inline-block;min-width:340px;'>
@@ -199,6 +213,12 @@ const char index_html[] PROGMEM = R"rawliteral(
               <option value='3'>Both</option>
             </select>
           </fieldset>
+          <fieldset>
+            <legend>
+              <b>&nbsp;Master / Slave Config&nbsp;</b>
+            </legend>
+            <input type="checkbox" id='master' name='master'> <label for="master">Master</label>
+          </fieldset>
           <div class="button-container-div">
             <button type='submit' class='button bgrn'>Save</button>
           </div>
@@ -230,7 +250,17 @@ const char index_html[] PROGMEM = R"rawliteral(
 	    document.getElementById('spk').checked = %SPKPLACEHOLDER%;
 	    document.getElementById('con').checked = %CONPLACEHOLDER%;
 	    document.getElementById('slta').checked = %SLTAPLACEHOLDER%;
+	    document.getElementById('master').checked = %MASTERPLACEHOLDER%;
       document.getElementById('new_pga').readOnly = document.getElementById('slta').checked;
+      if (%MASTERPLACEHOLDER%)
+      {
+        document.getElementById("header").innerHTML = "SeismoM5 - Master";
+      }
+      if (%SLAVEPLACEHOLDER%)
+      {
+        document.getElementById('master').disabled = true;
+        document.getElementById("header").innerHTML = "SeismoM5 - Slave";
+      }
       function disablePga()
       {
         if (document.getElementById('slta').checked) 
