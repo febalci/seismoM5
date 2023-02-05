@@ -58,6 +58,7 @@ void screen::show_title() {
 }
 
 void screen::show_method(boolean _stalta, boolean _clear, float _pga_trigger) {
+  M5.Lcd.setTextFont(1);
   M5.Lcd.setTextColor(YELLOW,BLACK);
   if (_clear) {
     M5.Lcd.setCursor(pga_print_x,pga_print_y);
@@ -68,6 +69,7 @@ void screen::show_method(boolean _stalta, boolean _clear, float _pga_trigger) {
 }
 
 void screen::show_mqtt(boolean _mqtt) {
+  M5.Lcd.setTextFont(1);
   if (_mqtt) {
     M5.Lcd.setTextColor(YELLOW,PURPLE);
     M5.Lcd.setCursor(mqtt_print_x,mqtt_print_y);
@@ -134,21 +136,34 @@ void screen::draw_pga_graph(float _pga) {
 }
 
 void screen::show_pga(float _pga) {
-  M5.Lcd.fillRect(2,mqtt_print_y-7,mqtt_print_x-7,14,BLACK);
   M5.Lcd.setTextColor(WHITE,BLACK);
+  M5.Lcd.setTextFont(1);
+#ifdef STICK
+  M5.Lcd.fillRect(2,mqtt_print_y-7,mqtt_print_x-7,14,BLACK);
+#else
+  M5.Lcd.fillRect(2,mqtt_print_y-11,mqtt_print_x-7,18,BLACK);
+#endif
   M5.Lcd.setCursor(2, mqtt_print_y);
   M5.Lcd.print("PGA: ");
   M5.Lcd.setCursor(mqtt_print_x-40, mqtt_print_y);
   M5.Lcd.print("(g)");
+#ifdef STICKC
   M5.Lcd.setCursor(30, mqtt_print_y+5);
   M5.Lcd.setFreeFont(FSSB9);  // Select Free Sans Serif Bold 9pt font
   M5.Lcd.printf("%.4f", _pga);
+#else
+  M5.Lcd.setCursor(30, mqtt_print_y+5);
+  M5.Lcd.setFreeFont(FSSB12);  // Select Free Sans Serif Bold 9pt font
+  M5.Lcd.printf("%.4f", _pga);
+#endif
   M5.Lcd.setTextFont(1);
 }
 
 void screen::show_stalta(float _sta, float _lta) {
-  M5.Lcd.fillRect(2,mqtt_print_y-7,mqtt_print_x-7,14,BLACK);
+  M5.Lcd.setTextFont(1);
   M5.Lcd.setTextColor(WHITE,BLACK);
+#ifdef STICKC
+  M5.Lcd.fillRect(2,mqtt_print_y-7,mqtt_print_x-7,14,BLACK);
   M5.Lcd.setCursor(2, mqtt_print_y);
   M5.Lcd.print("S:");
   M5.Lcd.setCursor(mqtt_print_x-55, mqtt_print_y);
@@ -158,6 +173,18 @@ void screen::show_stalta(float _sta, float _lta) {
   M5.Lcd.printf("%.4f", _sta);
   M5.Lcd.setTextFont(1);
   M5.Lcd.setCursor(mqtt_print_x-43, mqtt_print_y);
+#else
+  M5.Lcd.fillRect(2,mqtt_print_y-11,mqtt_print_x-7,19,BLACK);
+  M5.Lcd.setCursor(2, mqtt_print_y);
+  M5.Lcd.print("S:");
+  M5.Lcd.setCursor(mqtt_print_x-75, mqtt_print_y);
+  M5.Lcd.print("L:");
+  M5.Lcd.setCursor(14, mqtt_print_y+5);
+  M5.Lcd.setFreeFont(FSSB12);
+  M5.Lcd.printf("%.4f", _sta);
+  M5.Lcd.setFreeFont(FSSB9);
+  M5.Lcd.setCursor(mqtt_print_x-63, mqtt_print_y+4);
+#endif
   M5.Lcd.printf("%.4f", _lta);
 }
 
