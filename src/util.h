@@ -25,6 +25,8 @@ extern float pga_trigger, pga_trigger_changed; // (g - m/s2)
 extern uint16_t flush_period; //seconds
 extern bool continuous_graph; // false: Draw graph only when EQ happens
 extern bool slta; // true: use STA/LTA Method instead of trigger
+extern bool master;
+extern bool slave;
 
 // Logging
 extern uint8_t logging; // 0: None, 1: Serial only, 2: WebSerial only, 3: Serial and WebSerial
