@@ -84,7 +84,11 @@ String config_processor(const String& var){
     server_details = logging;
   } else if (var == "SLTAPLACEHOLDER"){
     server_details = slta;
-  }
+  } else if (var == "MASTERPLACEHOLDER"){
+    server_details = master;
+  } else if (var == "SLAVEPLACEHOLDER"){
+    server_details = slave;
+  } 
   return server_details;
 }
 
@@ -141,6 +145,12 @@ void onWifiEvent(WiFiEvent_t event) {
 void setup() {
   Serial.begin(115200);   // Initialize serial communication
   M5.begin();
+
+#ifdef SLAVE
+  slave = true;
+#else
+  slave = false;
+#endif
 
   pref_init(); // Read Parameters
   pinMode(M5_LED, OUTPUT); // Setup M5 Red LED
@@ -204,14 +214,14 @@ void setup() {
     request->send(200, "text/html", "Recalibrating MPU");
     });
   server.on("/sv", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (request->getParam("new_pga")->value() != "") {
+    if (request->hasParam("new_pga") && (request->getParam("new_pga")->value() != "")) {
       pga_trigger_changed = request->getParam("new_pga")->value().toFloat();
     }
-    if (request->getParam("new_bri")->value() != "") {
+    if (request->hasParam("new_bri") && (request->getParam("new_bri")->value() != "")) {
       lcd_brightness = request->getParam("new_bri")->value().toInt();
       lcd.set_brightness(lcd_brightness);
     }
-    if (request->getParam("new_per")->value() != "") {
+    if (request->hasParam("new_per") && (request->getParam("new_per")->value() != "")) {
       flush_period = request->getParam("new_per")->value().toInt();
     }
     if (request->hasParam("spk")) {
@@ -223,9 +233,12 @@ void setup() {
     if (request->hasParam("con")) {
       if (request->getParam("con")->value() == "on") continuous_graph = true; else continuous_graph = false;
     } else continuous_graph = false;
-    if (request->getParam("lg")->value() != "") {
+    if (request->hasParam("lg") && (request->getParam("lg")->value() != "")) {
       logging = (request->getParam("lg")->value().toInt());
     }
+    if (request->hasParam("master")) {
+      if (request->getParam("master")->value() == "on") master = true; else master = false;
+    } else master = false;
     pref_update();
     request->send(200, "text/html", "Settings Changed");
     request->redirect("/");
@@ -264,7 +277,10 @@ void loop() {
 
     pga = sqrt(x_vector_mag * x_vector_mag + y_vector_mag * y_vector_mag + z_vector_mag * z_vector_mag)*scale_factor;
 
-//    String msg = "/*"+ String(ax) + "," + String(ay) +"," + String(az) + ","+ String(pga,4).c_str() +"*/";
+// Serial Studio
+//    String msg = "/*"+ String(ax) + "," + String(ay) +"," + String(az) + ","+ String(pga,4).c_str() +"*/"; 
+// Jamasesis
+//    String msg = String(ax) + " , " + String(ay) +" , " + String(az) + " , " + String(int(pga*10000)).c_str() ;
 //    Serial.println(msg);
 
     if ((continuous_graph) || (not continuous_graph && eq_status)) lcd.draw_acc_graph(x_vector_mag,y_vector_mag,z_vector_mag);
@@ -281,30 +297,33 @@ void loop() {
         log("\tLTA");
         log(" : ");
         logln(staLta.getLTA(),4);
-        eq_happening();
+        if ((master && slave_eq_state) || !master) {
+          eq_happening();
+        }
       }
     } else {
       lcd.show_pga(pga);
       if (pga >= pga_trigger) {
-        eq_happening();
+        if ((master && slave_eq_state) || !master) {
+          eq_happening();
+        }
       }
     }
 
     if (eq_status) { // Earthquake still happening
       eq_time_count++ ;
 
-      if ((slta && !staLta.checkTrigger()) || (!slta && eq_time_count > eq_pet)) { // EQ Ends...
-            
-        eq_status = false;
-        eq_time_count = 0;
+      if (((slta && !staLta.checkTrigger()) || (!slta && eq_time_count > eq_pet)) || (master && !slave_eq_state)) { // EQ Ends...              
+          eq_status = false;
+          eq_time_count = 0;
 
-        updateState("LISTENING");
+          updateState("LISTENING");
 
-        publish_mqtt(MQTT_PUB_EVENT, updateEvent(ax,ay,az,pga).c_str(), 0, true);
+          publish_mqtt(MQTT_PUB_EVENT, updateEvent(ax,ay,az,pga).c_str(), 0, true);
 
-        digitalWrite(M5_LED, HIGH);
-        if (SPK_HAT) ledcWriteTone(spkChannel, 0);
-        lcd.set_brightness(lcd_brightness);
+          digitalWrite(M5_LED, HIGH);
+          if (SPK_HAT) ledcWriteTone(spkChannel, 0);
+          lcd.set_brightness(lcd_brightness);
       } else {
         publish_mqtt(MQTT_PUB_EVENT, updateEvent(ax,ay,az,pga).c_str(), 0, true);
       }
