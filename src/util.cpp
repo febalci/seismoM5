@@ -19,6 +19,8 @@ float pga_trigger, pga_trigger_changed; // (g - m/s2)
 uint16_t flush_period; //seconds
 bool continuous_graph; // false: Draw graph only when EQ happens
 bool slta; // true: use STA/LTA Method instead of trigger
+bool master;
+bool slave;
 
 bool webSerialEnabled; // Disable until WebSerial is loaded
 
@@ -32,6 +34,8 @@ void pref_init() {
   continuous_graph = preferences.getBool("continuous", false);
   flush_period = preferences.getUShort("period", 60);
   slta = preferences.getBool("stalta", false);
+  logging = preferences.getChar("logging", 3);
+  master = preferences.getBool("master", false);
   preferences.end();
   logln("---------------  PREFERENCES READ ---------------");
   log("PGA Trigger: "); logln(pga_trigger);
@@ -40,6 +44,9 @@ void pref_init() {
   log("Lcd Stanby Brightness(7-15): "); logln(lcd_brightness);
   log("Continuous Graph: "); logln(continuous_graph);
   log("Event Values Update Period(secs): "); logln(flush_period);
+  log("Logging: "); logln(logging);
+  log("Master: "); logln(master);
+  log("Slave: "); logln(slave);
   logln("-------------------------------------------------");
 }
 
@@ -51,6 +58,8 @@ void pref_update() {
   preferences.putBool("continuous", continuous_graph);
   preferences.putUShort("period", flush_period);
   preferences.putBool("stalta", slta);
+  preferences.putChar("logging", logging);
+  preferences.putBool("master", master);
   preferences.end();
   logln("--------------  PREFERENCES UPDATE --------------");
   log("PGA Trigger: "); logln(pga_trigger_changed);
@@ -59,5 +68,8 @@ void pref_update() {
   log("Lcd Stanby Brightness(7-15): "); logln(lcd_brightness);
   log("Continuous Graph: "); logln(continuous_graph);
   log("Event Values Update Period(secs): "); logln(flush_period);
+  log("Logging: "); logln(logging);
+  log("Master: "); logln(master);
+  log("Slave: "); logln(slave);
   logln("-------------------------------------------------");
 }

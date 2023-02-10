@@ -143,6 +143,27 @@ The first upload should be a Serial connection upload. After that, these 2 lines
 ;upload_protocol = espota
 ```
 
+## Master / Slave Configuration for more reliable triggers
+
+Although MPU6886 on M5StickC is not very much noisy, once in a while, the pga jumps for 5-10 seconds above trigger (frequency is like once or twice every 1-2 days, up to 0.0150 g according to my results). So i also added a Master/Slave Configuration which requires two M5Sticks. If the Master stick triggers an earthquake, it also checks the Slave Stick and if it also has a trigger, then the Master changes its state to "EARTHQUAKE" only then...
+
+**Configuration:**
+
+1. In order to upload "SLAVE" first, uncomment "//#define SLAVE" and make it "**#define SLAVE**" in config.h file.
+
+2. Upload the SLAVE M5StickC. The SLAVE is ready.
+
+3. Comment the "#define SLAVE" line back to "**//#define SLAVE**" in config.h file.
+
+4. Upload the MASTER M5StickC.
+
+5. Go to the Web Page of MASTER M5StickC.
+
+6. Check "Master" checkbox and save it. If you don't check the "Master" checkbox on web page, this stick will still act as a standalone SeismoM5.
+
+7. Just check the /state of MASTER Stick for earthquakes, not the SLAVE!
+
+
 ## Mounting
 
 Seismologists mount accelerometer based seismic sensors to the lowest point of the structure, close to the ground as possible. However, since this is an amateur earthquake sensor, i mount it as high as possible in the house, on a wall. You can use the in-built magnets of M5StickC to attach it to a metal surface but as i experienced they are not so strong and may fall off during an earthquake. Double sided adhesive mounting tapes can also work, but make sure the wall paint is a stickable one. All in all, it should be mounted very firm and be careful about the x,y,z axis of the accelerometer; use a carpenters level if required. 

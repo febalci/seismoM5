@@ -10,6 +10,8 @@ AsyncMqttClient mqttClient;
 
 TimerHandle_t mqttReconnectTimer;
 
+bool slave_eq_state = false;
+
 void connectToMqtt() {
   logln("Connecting to MQTT...");
   mqttClient.connect();
@@ -74,6 +76,12 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
     }
     
     pref_update();
+  } else if (String(topic) == MQTT_PUB_STATE_SLAVE) {
+    if (String(payload) == "EARTHQUAKE") {
+      slave_eq_state = true;
+    } else {
+      slave_eq_state = false;
+    }
   }
 }
 
@@ -82,6 +90,7 @@ void onMqttConnect(bool sessionPresent) {
   publish_available();
   uint16_t packetIdSub = mqttClient.subscribe(MQTT_PUB_STATE, 0);
   uint16_t packetIdSub2 = mqttClient.subscribe(MQTT_PUB_COMMAND, 0);
+  uint16_t packetIdSub3 = mqttClient.subscribe(MQTT_PUB_STATE_SLAVE, 0);
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
