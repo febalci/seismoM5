@@ -53,39 +53,40 @@ void screen::show_calibration() {
 void screen::show_title() {
   M5.Lcd.setTextSize(1);
   M5.Lcd.setTextColor(GREEN,BLACK);
-  M5.Lcd.setCursor(2, pga_print_y);
-  M5.Lcd.print("EARTHQUAKE SENSOR");
+  M5.Lcd.setTextDatum(TL_DATUM);
+  M5.Lcd.drawString("EARTHQUAKE SENSOR",2,title_top_y,1);
 }
 
 void screen::show_method(boolean _stalta, boolean _clear, float _pga_trigger) {
   M5.Lcd.setTextFont(1);
   M5.Lcd.setTextColor(YELLOW,BLACK);
+  M5.Lcd.setTextDatum(TR_DATUM);
   if (_clear) {
-    M5.Lcd.setCursor(pga_print_x,pga_print_y);
-    M5.Lcd.print("      ");
+    M5.Lcd.drawString("      ",title_right_align_x,title_top_y);    
   }
-  M5.Lcd.setCursor(pga_print_x,pga_print_y);
-  if (_stalta) M5.Lcd.printf("S/LTA"); else M5.Lcd.printf("%.4f", _pga_trigger);
+  if (_stalta) M5.Lcd.drawString("S/LTA",title_right_align_x,title_top_y); 
+    else M5.Lcd.drawFloat(_pga_trigger,4,title_right_align_x,title_top_y);
 }
 
 void screen::show_mqtt(boolean _mqtt) {
   M5.Lcd.setTextFont(1);
+  M5.Lcd.setTextDatum(BR_DATUM);
   if (_mqtt) {
     M5.Lcd.setTextColor(YELLOW,PURPLE);
-    M5.Lcd.setCursor(mqtt_print_x,mqtt_print_y);
-    M5.Lcd.print("MQTT");
+    M5.Lcd.drawString("MQTT",title_right_align_x,title_bottom_y);
   } else {
     M5.Lcd.setTextColor(WHITE,BLACK);
-    M5.Lcd.setCursor(mqtt_print_x,mqtt_print_y);
-    M5.Lcd.print("    ");
+    M5.Lcd.drawString("    ",title_right_align_x,title_bottom_y);
   }
 }
 
 void screen::draw_axis() {
   // Draw Graph Axis
-  M5.Lcd.drawFastVLine(7,15,graph_clear_y_height+3,WHITE);
+  M5.Lcd.drawFastVLine(7,15,title_bottom_y-38,WHITE);
+
   // Draw Tickmarks
   for (int i = 0; i < 3 ; i++) {
+    graph_y_axis[i]=(2*i+1)*((title_bottom_y-38)/6)+15;
     M5.Lcd.drawFastHLine(5,graph_y_axis[i],2,WHITE);
   }
 }
@@ -112,7 +113,7 @@ void screen::draw_acc_graph(float _xVector, float _yVector, float _zVector) {
   M5.Lcd.drawLine(graph_x_start, y0[2], graph_x_start+1, y1[2], BLUE);
 
   graph_x_start++;
-  if (graph_x_start > graph_x_limit) graph_x_start = graph_x_axis + 1;
+  if (graph_x_start > title_right_align_x) graph_x_start = graph_x_axis + 1;
 }
 
 void screen::draw_pga_graph(float _pga) {
@@ -132,60 +133,89 @@ void screen::draw_pga_graph(float _pga) {
   M5.Lcd.drawLine(graph_x_start, y0, graph_x_start+1, y1, GREEN);
 
   graph_x_start++;
-  if (graph_x_start > graph_x_limit) graph_x_start = graph_x_axis + 1;
+  if (graph_x_start > title_right_align_x) graph_x_start = graph_x_axis + 1;
+}
+
+void screen::draw_slta_graph(float _sta, float _lta, float _pga) {
+  int y0[3], y1[3];
+  float vectors[3] = {_sta, _lta, _pga};
+
+  for (int i = 0; i < 3 ; i++) {
+    if (previous_graph_y[i] != 0) {
+      y0[i] = previous_graph_y[i];
+    } else {
+      y0[i] = graph_y_axis[2]+8;
+    }
+    y1[i] = graph_y_axis[2] - (vectors[i] * 2000);
+    if (y1[i] > (graph_y_axis[2] + 8)) y1[i] = graph_y_axis[2] + 8;
+    if (y1[i] < graph_y_axis[0]) y1[i] = graph_y_axis[0];
+    previous_graph_y[i] = y1[i];
+  }
+
+  M5.Lcd.fillRect(graph_x_start+1, 15, 20, graph_clear_y_height, BLACK);
+
+  M5.Lcd.drawLine(graph_x_start, y0[0], graph_x_start+1, y1[0], RED);
+
+  M5.Lcd.drawLine(graph_x_start, y0[1], graph_x_start+1, y1[1], BLUE);
+
+//  M5.Lcd.drawLine(graph_x_start, y0[2], graph_x_start+1, y1[2], BLUE);
+
+  graph_x_start++;
+  if (graph_x_start > title_right_align_x) graph_x_start = graph_x_axis + 1;
+  
 }
 
 void screen::show_pga(float _pga) {
   M5.Lcd.setTextColor(WHITE,BLACK);
-  M5.Lcd.setTextFont(1);
-#ifdef STICK
-  M5.Lcd.fillRect(2,mqtt_print_y-7,mqtt_print_x-7,14,BLACK);
-#else
-  M5.Lcd.fillRect(2,mqtt_print_y-11,mqtt_print_x-7,18,BLACK);
-#endif
-  M5.Lcd.setCursor(2, mqtt_print_y);
-  M5.Lcd.print("PGA: ");
-  M5.Lcd.setCursor(mqtt_print_x-40, mqtt_print_y);
-  M5.Lcd.print("(g)");
+  M5.Lcd.setTextDatum(BL_DATUM);
+
 #ifdef STICKC
-  M5.Lcd.setCursor(30, mqtt_print_y+5);
-  M5.Lcd.setFreeFont(FSSB9);  // Select Free Sans Serif Bold 9pt font
-  M5.Lcd.printf("%.4f", _pga);
+  M5.Lcd.fillRect(2,title_bottom_y-16,title_right_align_x-30,16,BLACK);
 #else
-  M5.Lcd.setCursor(30, mqtt_print_y+5);
-  M5.Lcd.setFreeFont(FSSB12);  // Select Free Sans Serif Bold 9pt font
-  M5.Lcd.printf("%.4f", _pga);
+  M5.Lcd.fillRect(2,title_bottom_y-20,title_right_align_x-30,20,BLACK);
 #endif
+
   M5.Lcd.setTextFont(1);
+  M5.Lcd.drawString("PGA:", 2, title_bottom_y);
+
+#ifdef STICKC
+  M5.Lcd.setFreeFont(FSSB9);  // Select Free Sans Serif Bold 9pt font
+#else
+  M5.Lcd.setFreeFont(FSSB12);  // Select Free Sans Serif Bold 9pt font
+#endif
+
+  M5.Lcd.drawFloat(_pga, 4, 30, title_bottom_y+2);
+  M5.Lcd.setTextFont(1);
+  M5.Lcd.drawString("(g)", (title_right_align_x/2)+10, title_bottom_y);
 }
 
 void screen::show_stalta(float _sta, float _lta) {
-  M5.Lcd.setTextFont(1);
   M5.Lcd.setTextColor(WHITE,BLACK);
+  M5.Lcd.setTextDatum(BL_DATUM);
+
 #ifdef STICKC
-  M5.Lcd.fillRect(2,mqtt_print_y-7,mqtt_print_x-7,14,BLACK);
-  M5.Lcd.setCursor(2, mqtt_print_y);
-  M5.Lcd.print("S:");
-  M5.Lcd.setCursor(mqtt_print_x-55, mqtt_print_y);
-  M5.Lcd.print("L:");
-  M5.Lcd.setCursor(14, mqtt_print_y+5);
-  M5.Lcd.setFreeFont(FSSB9);  // Select Free Sans Serif Bold 9pt font
-  M5.Lcd.printf("%.4f", _sta);
-  M5.Lcd.setTextFont(1);
-  M5.Lcd.setCursor(mqtt_print_x-43, mqtt_print_y);
+  M5.Lcd.fillRect(2,title_bottom_y-16,title_right_align_x-35,16,BLACK);
 #else
-  M5.Lcd.fillRect(2,mqtt_print_y-11,mqtt_print_x-7,19,BLACK);
-  M5.Lcd.setCursor(2, mqtt_print_y);
-  M5.Lcd.print("S:");
-  M5.Lcd.setCursor(mqtt_print_x-75, mqtt_print_y);
-  M5.Lcd.print("L:");
-  M5.Lcd.setCursor(14, mqtt_print_y+5);
-  M5.Lcd.setFreeFont(FSSB12);
-  M5.Lcd.printf("%.4f", _sta);
-  M5.Lcd.setFreeFont(FSSB9);
-  M5.Lcd.setCursor(mqtt_print_x-63, mqtt_print_y+4);
+  M5.Lcd.fillRect(2,title_bottom_y-20,title_right_align_x-35,20,BLACK);
 #endif
-  M5.Lcd.printf("%.4f", _lta);
+
+  M5.Lcd.setTextFont(1);  
+  M5.Lcd.setTextColor(RED,BLACK);
+  M5.Lcd.drawString("S:", 2, title_bottom_y);
+  M5.Lcd.setTextColor(WHITE,BLACK);
+
+#ifdef STICKC
+  M5.Lcd.setFreeFont(FSSB9);  // Select Free Sans Serif Bold 9pt font
+#else
+  M5.Lcd.setFreeFont(FSSB12);  // Select Free Sans Serif Bold 9pt font
+#endif
+
+  M5.Lcd.drawFloat(_sta, 4, 14, title_bottom_y+2);
+  M5.Lcd.setTextFont(1);
+  M5.Lcd.setTextColor(BLUE,BLACK);
+  M5.Lcd.drawString("L:", (title_right_align_x/2), title_bottom_y);
+  M5.Lcd.setTextColor(WHITE,BLACK);
+  M5.Lcd.drawFloat(_lta, 4, (title_right_align_x/2)+14, title_bottom_y);
 }
 
 void screen::clear_screen() {
