@@ -74,9 +74,9 @@ int MPU6886s::Init(void) {
     delay(1);
 
 // 0X19, REGISTER 25 – SAMPLE RATE DIVIDER: Sample Rate Divider - SAMPLE_RATE = INTERNAL_SAMPLE_RATE / (1 + SMPLRT_DIV) Where INTERNAL_SAMPLE_RATE = 1 kHz
-    regdata = 0b00000101; // 0x05
-    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_SMPLRT_DIV, 1, &regdata);
-    delay(1);
+//    regdata = 0b01100011; // 99 -> 10Hz 
+//    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_SMPLRT_DIV, 1, &regdata);
+//    delay(1);
 
 // 0x38, REGISTER 56 – INTERRUPT ENABLE
     regdata = 0b00000000; // 0x00
@@ -106,7 +106,7 @@ I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_PWR_MGMT_2, 1, &regdata);
        A_DLPF_CFG[2:0] = 1 (b001)
     */
     I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_CONFIG2, 1, &regdata);
-    regdata = 0b00000110;  // average 32 samples, use 5 Hz DLPF
+    regdata = 0b00000110;  // average 4 samples, use 5 Hz DLPF
     I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_ACCEL_CONFIG2, 1, &regdata);
     delay(1);
 
@@ -145,7 +145,11 @@ void MPU6886s::calibrateAccel(int _bufsize, int _acl_deadzone) {
     bufsize = _bufsize;
     acl_deadzone = _acl_deadzone;
     unsigned char regdata;
-    float factoryTrim;
+
+// 0X19, REGISTER 25 – SAMPLE RATE DIVIDER: Sample Rate Divider - SAMPLE_RATE = INTERNAL_SAMPLE_RATE / (1 + SMPLRT_DIV) Where INTERNAL_SAMPLE_RATE = 1 kHz
+    regdata = 0b00000000; // 0 -> 1kHz 
+    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_SMPLRT_DIV, 1, &regdata);
+    delay(1);
 
     if (state==0){
         logln("\nReading sensors for first time...");
@@ -186,6 +190,10 @@ void MPU6886s::calibrateAccel(int _bufsize, int _acl_deadzone) {
         logln("Check that your sensor readings are close to 16384 0 0");
         state++;
     }
+// 0X19, REGISTER 25 – SAMPLE RATE DIVIDER: Sample Rate Divider - SAMPLE_RATE = INTERNAL_SAMPLE_RATE / (1 + SMPLRT_DIV) Where INTERNAL_SAMPLE_RATE = 1 kHz
+    regdata = 0b01100011; // 99 -> 10Hz 
+    I2C_Write_NBytes(MPU6886_ADDRESS, MPU6886_SMPLRT_DIV, 1, &regdata);
+    delay(1);
 }
 
 void MPU6886s::meansensors(){
@@ -218,7 +226,7 @@ void MPU6886s::meansensors(){
       mean_az=buff_az/bufsize;
     }
     i++;
-    delay(8); //Needed so we don't get repeated measures
+    delay(1); //Needed so we don't get repeated measures
   }
 }
 
