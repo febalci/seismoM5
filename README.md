@@ -1,4 +1,7 @@
 # seismoM5
+<p align="center">
+<img src="pics/S5.jpg" width="150" height="125">
+</p>
 SeismoM5 is an Earthquake Sensor Implementation on M5StickC, using its own MPU6886 accelerometer. Although MPU6886 in M5StickC is a bit on the noisy side; disabling Gyro and using an accel calibration helped a little. The properties of this project is:
 
 - Calibrate MPU6886 accelerometer and use calibration results as offsets.
