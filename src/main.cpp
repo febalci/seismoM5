@@ -187,7 +187,7 @@ void setup() {
   ArduinoOTA.begin();
   MDNS.addService("http", "tcp", 80);
 
-  publish_mqtt(MQTT_PUB_EVENT, updateEvent(0,0,0,0.00000).c_str(), 0, true);
+  publish_mqtt(MQTT_PUB_EVENT, updateEvent(16384,0,0,0.00000).c_str(), 0, true);
   publish_mqtt(MQTT_PUB_PGA_TRIGGER, String(pga_trigger,4).c_str(), 1, true);
   pga_trigger_changed = pga_trigger;
 
@@ -332,7 +332,7 @@ void loop() {
         connectToMqtt();
         delay(500);
         publish_mqtt(MQTT_PUB_PGA_TRIGGER, String(pga_trigger,4).c_str(), 1, true);
-        publish_mqtt(MQTT_PUB_EVENT, updateEvent(0,0,0,0.0000).c_str(), 0, true);
+        publish_mqtt(MQTT_PUB_EVENT, updateEvent(16384,0,0,0.0000).c_str(), 0, true);
         updateState("LISTENING");
       }
     }
