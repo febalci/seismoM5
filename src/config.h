@@ -17,17 +17,17 @@
 // MQTT Parameters
 bool MQTT_active = true; // Enable / Disable MQTT for initial start only
 
-#define MQTT_SERVER "XXXXXXX"
+#define MQTT_SERVER "192.168.1.95"
 #define MQTT_PORT 1883
-#define MQTT_USER "XXXXXXX"
-#define MQTT_PASS "XXXXXXX"
+#define MQTT_USER "mosquitto"
+#define MQTT_PASS "mosquitto"
 
 #ifdef SLAVE
   #define MQTT_PUB_TOPIC_MAIN MASTER_HOST "/" SLAVE_HOST
   #define MQTT_PUB_STATE_SLAVE (MQTT_PUB_TOPIC_MAIN "/na")
 #else
   #define MQTT_PUB_TOPIC_MAIN MASTER_HOST
-  #define MQTT_PUB_STATE_SLAVE MQTT_PUB_TOPIC_MAIN "/" SLAVE_HOST "/state"
+  #define MQTT_PUB_STATE_SLAVE  MQTT_PUB_TOPIC_MAIN "/" SLAVE_HOST "/state"
 #endif
 
 #define MQTT_PUB_EVENT (MQTT_PUB_TOPIC_MAIN "/event")
@@ -44,7 +44,7 @@ bool MQTT_active = true; // Enable / Disable MQTT for initial start only
 
 // MPU6886 Calibration Parameters
 #define buffersize 1000     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
-#define acel_deadzone 8     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
+#define acel_deadzone 7     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
 #define scale_factor 1      // scale_factor
 #define eq_pet 40           // Post Event Time for PGA Trigger (4 seconds)
 #define gravity 16384.0     // Gravity

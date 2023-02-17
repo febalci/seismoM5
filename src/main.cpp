@@ -50,8 +50,6 @@ void calibrate_MPU() {
     lcd.show_wait();
   }
 
-//  seismo.setFIFOEnable(true);
-//  seismo.RestFIFO();
   lcd.show_calibration();
   updateState("CALIBRATION");
 
@@ -94,16 +92,6 @@ String config_processor(const String& var){
 
 void eq_happening() {
   eq_status = true;
-/*
-  uint8_t DataBuf[420];
-  log("FIFO: ");
-  seismo.ReadFIFOBuff(DataBuf,420);
-  for (int i = 0; i < 420 ; i++) {
-    Serial.print(DataBuf[i]);
-    Serial.print(",");
-  }
-  Serial.println("");
-*/
   eq_time_count = 0;
   lcd.set_brightness(15); // Full Brightness
   updateState("EARTHQUAKE");
@@ -133,10 +121,6 @@ void onWifiEvent(WiFiEvent_t event) {
       logln("WiFi Disconnected. Restarting...");
       stopMqttTimer();
       xTimerStart(wifiReconnectTimer, 0);
-//      delay(3000);
-//      WiFi.setAutoReconnect(true);
-//      ESP.restart();
-//      WiFi.reconnect();
       break;
     default: break;
   }
@@ -277,26 +261,25 @@ void loop() {
 
     pga = sqrt(x_vector_mag * x_vector_mag + y_vector_mag * y_vector_mag + z_vector_mag * z_vector_mag)*scale_factor;
 
+// For Helicorder:
 // Serial Studio
 //    String msg = "/*"+ String(ax) + "," + String(ay) +"," + String(az) + ","+ String(pga,4).c_str() +"*/"; 
-// Jamasesis
+// Jamasesis - Select ASCII 4
 //    String msg = String(ax) + " , " + String(ay) +" , " + String(az) + " , " + String(int(pga*10000)).c_str() ;
 //    Serial.println(msg);
 
-    if ((continuous_graph) || (not continuous_graph && eq_status)) lcd.draw_acc_graph(x_vector_mag,y_vector_mag,z_vector_mag);
-//    if ((continuous_graph) || (not continuous_graph && eq_status)) lcd.draw_pga_graph(pga);
+    if ((continuous_graph) || (not continuous_graph && eq_status)){
+      if (slta) {
+        lcd.draw_slta_graph(staLta.getSTA(), staLta.getLTA(), pga);
+      } else {
+        lcd.draw_acc_graph(x_vector_mag,y_vector_mag,z_vector_mag);
+      }
+    } 
 
     if (slta) {
       staLta.updateData(pga);
       lcd.show_stalta(staLta.getSTA(),staLta.getLTA());
       if (staLta.checkTrigger()) {
-        log("Trigger detected! ");
-        log("STA");
-        log(" : ");
-        log(staLta.getSTA(),4);
-        log("\tLTA");
-        log(" : ");
-        logln(staLta.getLTA(),4);
         if ((master && slave_eq_state) || !master) {
           eq_happening();
         }
@@ -344,10 +327,10 @@ void loop() {
         stopMqttTimer();
         mqttClient.disconnect();
       } else {
+        updateState("MQTT_BUTTON_CONNECT");
         MQTT_active = true;
         connectToMqtt();
         delay(500);
-        updateState("MQTT_BUTTON_CONNECT");
         publish_mqtt(MQTT_PUB_PGA_TRIGGER, String(pga_trigger,4).c_str(), 1, true);
         publish_mqtt(MQTT_PUB_EVENT, updateEvent(0,0,0,0.0000).c_str(), 0, true);
         updateState("LISTENING");
