@@ -6,6 +6,16 @@
 #include "screen.h"
 #include "FreeFonts.h"
 
+
+void screen::show_wifi_connect() {
+    M5.Lcd.setRotation(1);
+    M5.Lcd.fillScreen(BLACK);
+    M5.Lcd.setTextColor(WHITE,BLACK);
+    M5.Lcd.setTextSize(1);
+    M5.Lcd.setCursor(2, 5);
+    M5.Lcd.print("CONNECTING WiFi...");
+}
+
 void screen::show_wait() {
     M5.Lcd.setRotation(1);
     M5.Lcd.fillScreen(BLACK);
