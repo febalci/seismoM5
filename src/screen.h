@@ -4,6 +4,7 @@
 class screen
 {
   public:
+    void show_wifi_connect();
     void show_wait();
     void show_calibration();
     void show_title();
