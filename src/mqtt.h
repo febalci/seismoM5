@@ -8,8 +8,6 @@
 
 AsyncMqttClient mqttClient;
 
-TimerHandle_t mqttReconnectTimer;
-
 bool slave_eq_state = false;
 
 void connectToMqtt() {
@@ -91,17 +89,19 @@ void onMqttConnect(bool sessionPresent) {
   uint16_t packetIdSub = mqttClient.subscribe(MQTT_PUB_STATE, 0);
   uint16_t packetIdSub2 = mqttClient.subscribe(MQTT_PUB_COMMAND, 0);
   uint16_t packetIdSub3 = mqttClient.subscribe(MQTT_PUB_STATE_SLAVE, 0);
+  publish_mqtt(MQTT_PUB_PGA_TRIGGER, String(pga_trigger,4).c_str(), 1, true);
+  publish_mqtt(MQTT_PUB_EVENT, "{\"x\":\"16384\",\"y\":\"0\",\"z\":\"0\",\"pga\":\"0.0000\"}", 0, true);
+  publish_mqtt(MQTT_PUB_STATE, "LISTENING", 1, true);
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
   logln("Disconnected from MQTT.");
   if (WiFi.isConnected() && MQTT_active) {
-    xTimerStart(mqttReconnectTimer, 0);
+//    xTimerStart(mqttReconnectTimer, 0);
   }
 }
 
 void initMqtt() {
-  mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onPublish(onMqttPublish);
@@ -111,7 +111,4 @@ void initMqtt() {
   mqttClient.setCredentials(MQTT_USER, MQTT_PASS);
 }
 
-void stopMqttTimer() {
-  xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-}
 #endif
