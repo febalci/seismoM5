@@ -17,10 +17,10 @@
 // MQTT Parameters
 bool MQTT_active = true; // Enable / Disable MQTT for initial start only
 
-#define MQTT_SERVER "192.168.1.95"
+#define MQTT_SERVER "XXXXXXX"
 #define MQTT_PORT 1883
-#define MQTT_USER "mosquitto"
-#define MQTT_PASS "mosquitto"
+#define MQTT_USER "XXXXXXX"
+#define MQTT_PASS "XXXXXXX"
 
 #ifdef SLAVE
   #define MQTT_PUB_TOPIC_MAIN MASTER_HOST "/" SLAVE_HOST
