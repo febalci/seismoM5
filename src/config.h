@@ -13,6 +13,7 @@
 #else
   #define WIFI_HOSTNAME MASTER_HOST
 #endif
+#define WIFI_RECONNECT_TIMER 1000// 10 ticks per second
 
 // MQTT Parameters
 bool MQTT_active = true; // Enable / Disable MQTT for initial start only
