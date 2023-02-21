@@ -28,6 +28,9 @@ extern bool slta; // true: use STA/LTA Method instead of trigger
 extern bool master;
 extern bool slave;
 
+extern unsigned long waitCount;
+extern uint8_t conn_stat;
+
 // Logging
 extern uint8_t logging; // 0: None, 1: Serial only, 2: WebSerial only, 3: Serial and WebSerial
 

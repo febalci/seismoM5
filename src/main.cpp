@@ -21,8 +21,6 @@ AsyncWebServer server(80);
 
 MPU6886s seismo;
 
-TimerHandle_t wifiReconnectTimer;
-
 STA_LTA staLta(trigger_threshold,detrigger_threshold);
 
 screen lcd;
@@ -101,28 +99,54 @@ void eq_happening() {
 
 void connectToWifi() {
   logln("Connecting to Wi-Fi...");
+  WiFi.disconnect();
   WiFi.begin(WIFI_SSID, WIFI_PASS);
 }
 
 void onWifiEvent(WiFiEvent_t event) {
-  switch (event) {
-    case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED:
-      logln("Connected or reconnected to WiFi");
+}
+
+void checkConnection() {
+  if (!WiFi.isConnected() && (conn_stat != 1)) { conn_stat = 0; }
+  if (MQTT_active) {
+    if (WiFi.isConnected() && !mqttClient.connected() && (conn_stat != 3))  { conn_stat = 2; }
+    if (WiFi.isConnected() && mqttClient.connected() && (conn_stat != 5)) { conn_stat = 4;}
+  } else {
+    if (WiFi.isConnected() && (conn_stat == 1))  { conn_stat = 4; }
+  }
+  switch (conn_stat) {
+    case 0:                                                       // MQTT and WiFi down: start WiFi
+      logln("[MQTT] and [WiFi] down: start [WiFi]");
+      connectToWifi();
+      conn_stat = 1;
+      waitCount = 0;
       break;
-    case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP:
-      logln("");
-      log("Connected to ");
-      logln(WIFI_SSID);
-      log("IP address: ");
-      logln(WiFi.localIP());
+    case 1:                                                       // WiFi starting, do nothing here
+      logln("[WiFi] starting, wait : "+ String(waitCount));
+      waitCount++;
+      if (waitCount > WIFI_RECONNECT_TIMER) {
+        ESP.restart();
+      }
+      break;
+    case 2:                                                       // WiFi up, MQTT down: start MQTT
+      logln("[WiFi] up, [MQTT] down: start [MQTT]");
       if (MQTT_active) connectToMqtt();
+      conn_stat = 3;
+      waitCount = 0;
       break;
-    case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-      logln("WiFi Disconnected. Restarting...");
-      stopMqttTimer();
-      xTimerStart(wifiReconnectTimer, 0);
+    case 3:                                                       // WiFi up, MQTT starting, do nothing here
+      logln("[WiFi] up, [MQTT] starting, wait : "+ String(waitCount));
+      waitCount++;
       break;
-    default: break;
+    case 4:                                                       // WiFi up, MQTT up: finish MQTT configuration
+      if (MQTT_active) {
+        logln("[WiFi] up, [MQTT] up: Connected");
+      } else {
+        logln("[WiFi] up, [MQTT] button disabled: Connected");
+      }
+      conn_stat = 5;  
+      waitCount = 0;                  
+      break;
   }
 }
 
@@ -143,17 +167,24 @@ void setup() {
   ledcSetup(spkChannel, spkFreq, spkResolution); // Setup SPK_HAT
   ledcAttachPin(SPK_pin, spkChannel);
   ledcWriteTone(spkChannel, 0);
-
-  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
+  lcd.show_wifi_connect();  
   initMqtt(); //Initialize MQTT Server Parameters
 
   WiFi.mode(WIFI_STA);
   WiFi.onEvent(onWifiEvent);
   WiFi.setHostname(WIFI_HOSTNAME);
   connectToWifi();
+
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    delay(100);
+    waitCount++;
+    if (waitCount > (WIFI_RECONNECT_TIMER)) {
+      ESP.restart();
+    }
   }
+  
+  if (MQTT_active) connectToMqtt();
+
   WebSerial.begin(&server);
   webSerialEnabled = true;
 
@@ -187,8 +218,6 @@ void setup() {
   ArduinoOTA.begin();
   MDNS.addService("http", "tcp", 80);
 
-  publish_mqtt(MQTT_PUB_EVENT, updateEvent(0,0,0,0.00000).c_str(), 0, true);
-  publish_mqtt(MQTT_PUB_PGA_TRIGGER, String(pga_trigger,4).c_str(), 1, true);
   pga_trigger_changed = pga_trigger;
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {request->send_P(200, "text/html", index_html,config_processor);});
@@ -234,6 +263,7 @@ void setup() {
 }
 
 void loop() {
+  checkConnection();
   ArduinoOTA.handle();
   if (!calibrating) {
     M5.update();
@@ -275,6 +305,7 @@ void loop() {
         lcd.draw_acc_graph(x_vector_mag,y_vector_mag,z_vector_mag);
       }
     } 
+//    if ((continuous_graph) || (not continuous_graph && eq_status)) lcd.draw_pga_graph(pga);
 
     if (slta) {
       staLta.updateData(pga);
@@ -324,16 +355,10 @@ void loop() {
       if (mqttClient.connected()) {
         updateState("MQTT_BUTTON_DISCONNECT");
         MQTT_active = false;
-        stopMqttTimer();
         mqttClient.disconnect();
       } else {
         updateState("MQTT_BUTTON_CONNECT");
         MQTT_active = true;
-        connectToMqtt();
-        delay(500);
-        publish_mqtt(MQTT_PUB_PGA_TRIGGER, String(pga_trigger,4).c_str(), 1, true);
-        publish_mqtt(MQTT_PUB_EVENT, updateEvent(0,0,0,0.0000).c_str(), 0, true);
-        updateState("LISTENING");
       }
     }
 
@@ -346,4 +371,5 @@ void loop() {
     calibrate_MPU();
   }
 }
+
 

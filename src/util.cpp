@@ -6,6 +6,19 @@ bool flush_update = true;
 bool calibrating = false;
 uint8_t logging = 3;
 
+// WiFi and MQTT Connection Status
+unsigned long waitCount = 0;                 // counter
+uint8_t conn_stat = 0;                       // Connection status for WiFi and MQTT:
+                                             //
+                                             // status |   WiFi   |    MQTT
+                                             // -------+----------+------------
+                                             //      0 |   down   |    down
+                                             //      1 | starting |    down
+                                             //      2 |    up    |    down
+                                             //      3 |    up    |  starting
+                                             //      4 |    up    | finalising
+                                             //      5 |    up    |     up
+
 // Seismic Measuring Variables
 int16_t ax, ay, az;
 float xy_vector_mag, x_vector_mag, y_vector_mag, z_vector_mag;
