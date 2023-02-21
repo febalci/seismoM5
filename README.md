@@ -1,6 +1,6 @@
 # seismoM5
 <p align="center">
-<img src="pics/S5.jpg" width="150" height="125">
+<img src="pics/S5_logo.jpg" width="150" height="125">
 </p>
 SeismoM5 is an Earthquake Sensor Implementation on M5StickC, using its own MPU6886 accelerometer. Although MPU6886 in M5StickC is a bit on the noisy side; disabling Gyro and using an accel calibration helped a little. The properties of this project is:
 
@@ -174,6 +174,10 @@ Seismologists mount accelerometer based seismic sensors to the lowest point of t
 ** Due to the screen position, x axis is used as z axis and z axis is used as x axis within the code.
 
 ## Home Assistant Integration
+
+<p align="center">
+<img src="pics/S5_graph.jpg" width="382" height="200">
+</p>
 
 Here is the configuration that you should add to configuration.yaml:
 
