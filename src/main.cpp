@@ -119,11 +119,12 @@ void checkConnection() {
       logln("[MQTT] and [WiFi] down: start [WiFi]");
       connectToWifi();
       conn_stat = 1;
+      waitCount = 0;
       break;
     case 1:                                                       // WiFi starting, do nothing here
       logln("[WiFi] starting, wait : "+ String(waitCount));
       waitCount++;
-      if (waitCount>100) {
+      if (waitCount > WIFI_RECONNECT_TIMER) {
         ESP.restart();
       }
       break;
@@ -173,10 +174,15 @@ void setup() {
   WiFi.onEvent(onWifiEvent);
   WiFi.setHostname(WIFI_HOSTNAME);
   connectToWifi();
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-  }
 
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(100);
+    waitCount++;
+    if (waitCount > (WIFI_RECONNECT_TIMER)) {
+      ESP.restart();
+    }
+  }
+  
   if (MQTT_active) connectToMqtt();
 
   WebSerial.begin(&server);
