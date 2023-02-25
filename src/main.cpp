@@ -339,7 +339,7 @@ void loop() {
           if (SPK_HAT) ledcWriteTone(spkChannel, 0);
           lcd.set_brightness(lcd_brightness);
       } else {
-        publish_mqtt(MQTT_PUB_EVENT, updateEvent(ax,ay,az,pga).c_str(), 0, true);
+        if (eq_time_count%2) publish_mqtt(MQTT_PUB_EVENT, updateEvent(ax,ay,az,pga).c_str(), 0, true);
       }
     } else {
         if (flush_update) { // Send periodic event update message
