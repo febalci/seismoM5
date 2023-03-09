@@ -173,6 +173,33 @@ Seismologists mount accelerometer based seismic sensors to the lowest point of t
 
 ** Due to the screen position, x axis is used as z axis and z axis is used as x axis within the code.
 
+## Installation
+
+1. Download VSCode from https://code.visualstudio.com/download and install it.
+2. Open VSCode and press "Extensions" button (which has small squares icon) which is on the left vertical bar of the screen.
+3. In "Search extensions in Marketplace"  edit box, write "Platformio" and find and install Platformio IDE on VSCode.
+4. Wait for some time for platformio to be installed completely.
+
+This was the Compiler installation part. Now we will open and upload SeismoM5 to our stick.
+1. From https://github.com/febalci/seismoM5 address Press the Green "Code" Button on this page and select "Download ZIP". Download and unzip this into a folder.
+2. From VSCode, Press the Alien head on the left vertical bar on the screen. This is PIO (PlatformIO).
+3. Select "Open". PIO Home Page will come up. Press "Open Project" button from this page. Select the Folder of unzipped SeismoM5 and press open.
+4. Wait for some time for PIO to open and set everything up for this project.
+5. From the bottom blue bar of VSCode, click on where it writes "Default (seismom5)" and select "env:m5stick-c-plus" or "env:m5stick-c" from there.
+6. Now we will set the config parameters. Click "Explorer" on the left vertical band and open the "config.h" file under src folder.
+7. In this file you need to enter these parameters:
+```
+//WiFi Parameters
+#define WIFI_SSID "XXXXXXXX"
+#define WIFI_PASS "XXXXXXXX"
+
+#define MQTT_SERVER "XXXXXXXX"
+#define MQTT_PORT 1883
+#define MQTT_USER "XXXXXXXX"
+#define MQTT_PASS "XXXXXXXX"
+```
+8. Everything is ready to upload now. Connect your M5stick to a usb port on your computer. On the bottom blue bar find the arrow icon pointing right (Tooltip: PlatformIO Upload). Click it and wait for it to upload to M5Stick.
+
 ## Home Assistant Integration
 
 <p align="center">
