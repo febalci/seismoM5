@@ -296,7 +296,6 @@ offline warning automation for a "pushover" app on smart phone notification:
     to: "unavailable"
   condition:
   - condition: template
-    # Only run if more than 6 hours (21,600 sec) since it last ran
     value_template: '{{(as_timestamp(now()) - as_timestamp(state_attr("automation.seismom5_online_check", "last_triggered") | default(0)) | int > 600 )}}'
   action:
   - service: notify.pushover
