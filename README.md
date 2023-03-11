@@ -211,37 +211,66 @@ Here is the configuration that you should add to configuration.yaml:
 ```
 mqtt:
   sensor:
+    - name: "seismoM5_online"
+      state_topic: "seismoM5/status"
+      icon: mdi:pulse
     - name: "seismoM5_state"
-      state_topic: "m5seismo/state"
+      state_topic: "seismoM5/state"
       availability:
-        - topic: "m5seismo/status"
+        - topic: "seismoM5/status"
           payload_available: "online"
           payload_not_available: "offline"
       icon: mdi:pulse
     - name: "seismoM5_pga"
       availability:
-        - topic: "m5seismo/status"
+        - topic: "seismoM5/status"
           payload_available: "online"
           payload_not_available: "offline"
-      state_topic: "m5seismo/event"
+      state_topic: "seismoM5/event"
       value_template: "{{ value_json.pga }}"
       icon: mdi:pulse
       unit_of_measurement: "g"
-
+    - name: "seismoM5_x"
+      availability:
+        - topic: "seismoM5/status"
+          payload_available: "online"
+          payload_not_available: "offline"
+      state_topic: "seismoM5/event"
+      value_template: "{{ value_json.x }}"
+      icon: mdi:pulse
+      unit_of_measurement: "g"
+    - name: "seismoM5_y"
+      availability:
+        - topic: "seismoM5/status"
+          payload_available: "online"
+          payload_not_available: "offline"
+      state_topic: "seismoM5/event"
+      value_template: "{{ value_json.y }}"
+      icon: mdi:pulse
+      unit_of_measurement: "g"
+    - name: "seismoM5_z"
+      availability:
+        - topic: "seismoM5/status"
+          payload_available: "online"
+          payload_not_available: "offline"
+      state_topic: "seismoM5/event"
+      value_template: "{{ value_json.z }}"
+      icon: mdi:pulse
+      unit_of_measurement: "g"
   button:
     - unique_id: seismom5_reset_btn
       name: "Restart SeismoM5"
-      command_topic: "m5seismo/command"
+      command_topic: "seismoM5/command"
       payload_press: "{\"reset\": true }"
       availability:
-        - topic: "m5seismo/status"
+        - topic: "seismoM5/status"
       qos: 0
       retain: false
       entity_category: "config"
       device_class: "restart"
 ```
 
-and the earthquake warning automation for a pushover smart phone notification:
+and the earthquake warning automation for a "pushover" app on smart phone notification:
 
 ```
 - alias: Earthquake
@@ -254,10 +283,10 @@ and the earthquake warning automation for a pushover smart phone notification:
   - service: notify.pushover
     data_template:
       message: >
-        EARTHQUAKE HAPPENING !!!
+        DEPREM !!!
 ```
 
-offline warning automation for a pushover smart phone notification:
+offline warning automation for a "pushover" app on smart phone notification:
 
 ```
 - alias: SeismoM5 Online Check
@@ -265,9 +294,39 @@ offline warning automation for a pushover smart phone notification:
   - platform: state
     entity_id: sensor.seismom5_state
     to: "unavailable"
+  condition:
+  - condition: template
+    # Only run if more than 6 hours (21,600 sec) since it last ran
+    value_template: '{{(as_timestamp(now()) - as_timestamp(state_attr("automation.seismom5_online_check", "last_triggered") | default(0)) | int > 600 )}}'
   action:
   - service: notify.pushover
     data_template:
       message: >
         SeismoM5 Offline...
+  id: "seismom5_online_check"
+```
+
+Lovelace cards for the sensors
+```
+type: grid
+square: false
+columns: 1
+cards:
+  - type: entity
+    entity: sensor.seismom5_pga
+  - type: entity
+    entity: sensor.seismom5_state
+    name: SeismoM5 State
+  - type: entity
+    entity: sensor.seismom5_online
+  - type: logbook
+    entities:
+      - sensor.seismom5_state
+  - show_name: true
+    show_icon: true
+    type: button
+    tap_action:
+      action: toggle
+    entity: button.restart_seismom5
+    icon_height: 30px
 ```
